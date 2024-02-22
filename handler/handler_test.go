@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Moranilt/http-utils/response"
 	"github.com/Moranilt/http-utils/tiny_errors"
 	"github.com/gorilla/mux"
 )
@@ -505,7 +506,7 @@ func (cntr *testHandleFuncController[ReqT, RespT]) Run(t testing.TB, logger Logg
 		}
 
 		if cntr.jsonRequest != nil {
-			newHandler = newHandler.WithJson()
+			newHandler = newHandler.WithJSON()
 		}
 		if cntr.vars != nil {
 			newHandler = newHandler.WithVars()
@@ -557,7 +558,7 @@ func (cntr *testHandleFuncController[ReqT, RespT]) Run(t testing.TB, logger Logg
 		return
 	}
 
-	var mockResp DefaultResponse[RespT, any]
+	var mockResp response.DefaultResponse[RespT, any]
 	err = json.NewDecoder(resp.Body).Decode(&mockResp)
 	if err != nil {
 		t.Error(err)
