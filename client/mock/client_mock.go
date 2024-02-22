@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"sync"
 
 	"github.com/Moranilt/http-utils/mock"
 )
@@ -18,7 +17,6 @@ const (
 
 type MockedClient struct {
 	history *mock.MockHistory[*mockClientData]
-	wg      *sync.WaitGroup
 }
 
 type mockClientData struct {
@@ -33,7 +31,6 @@ type mockClientData struct {
 func New() *MockedClient {
 	return &MockedClient{
 		history: mock.NewMockHistory[*mockClientData](),
-		wg:      &sync.WaitGroup{},
 	}
 }
 
