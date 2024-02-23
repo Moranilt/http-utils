@@ -74,6 +74,7 @@ type Logger interface {
 	Debug(msg string, args ...any)
 	Debugf(format string, args ...any)
 
+	InfoContext(ctx context.Context, msg string, args ...any)
 	Info(msg string, args ...any)
 	Infof(format string, args ...any)
 
@@ -83,6 +84,7 @@ type Logger interface {
 	WithRequestInfo(r *http.Request) Logger
 	WithField(key string, value any) Logger
 	WithFields(fields ...any) Logger
+	WithRequestId(ctx context.Context) Logger
 }
 
 func New(output io.Writer, t LoggerType) Logger {
@@ -107,6 +109,10 @@ func New(output io.Writer, t LoggerType) Logger {
 		l,
 	}
 	return logger
+}
+
+func (s *SLogger) InfoContext(ctx context.Context, msg string, args ...any) {
+	s.root.Log(ctx, LevelInfo, msg, args...)
 }
 
 func (s *SLogger) Error(msg string, args ...any) {
@@ -174,22 +180,20 @@ func (l *SLogger) Info(msg string, args ...any) {
 }
 
 func (l *SLogger) WithRequestInfo(r *http.Request) Logger {
-	l = l.WithRequestId(r.Context())
+	log := l.WithRequestId(r.Context())
 	var clientIP string
 
 	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		clientIP = ip
 	}
 
-	return &SLogger{
-		root: l.root.With(
-			"path", r.URL.Path,
-			"method", r.Method,
-			"ip", clientIP,
-		),
-	}
+	return log.With(
+		"path", r.URL.Path,
+		"method", r.Method,
+		"ip", clientIP,
+	)
 }
-func (l *SLogger) WithRequestId(ctx context.Context) *SLogger {
+func (l *SLogger) WithRequestId(ctx context.Context) Logger {
 	requestId := ctx.Value(CtxRequestId)
 	if requestId != "" {
 		return &SLogger{
