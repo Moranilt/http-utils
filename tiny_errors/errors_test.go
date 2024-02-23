@@ -1,106 +1,137 @@
 package tiny_errors
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestErrors(t *testing.T) {
-	t.Run("code and message", func(t *testing.T) {
-		err := New(2, Message("error message"))
+func TestErrorHandler(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      ErrorHandler
+		expected string
+	}{
+		{
+			name:     "code and message",
+			err:      New(2, Message("error message")),
+			expected: "{\"code\":2,\"message\":\"error message\",\"details\":null}",
+		},
+		{
+			name:     "code, message and details",
+			err:      New(2, Message("error message"), Detail("name", "John")),
+			expected: "{\"code\":2,\"message\":\"error message\",\"details\":{\"name\":\"John\"}}",
+		},
+		{
+			name:     "error message",
+			err:      New(2, Message("error message"), Detail("name", "John")),
+			expected: "error message",
+		},
+		{
+			name:     "message with format args",
+			err:      New(2, Message("error message %s, %d", "name", 20)),
+			expected: "{\"code\":2,\"message\":\"error message name, 20\",\"details\":null}",
+		},
+		{
+			name: "details map is nil",
+			err: func() *Error {
+				err := &Error{Code: 1, Message: "error message"}
+				option := Detail("name", "John")
+				option(err)
+				return err
+			}(),
+			expected: "error message",
+		},
+		{
+			name: "init array of errors without message option",
+			err: func() ErrorHandler {
+				var (
+					ErrCodeBodyRequired = 1
+					errors              = map[int]string{
+						ErrCodeBodyRequired: "body required",
+					}
+				)
+				Init(errors)
+				return New(ErrCodeBodyRequired)
+			}(),
+			expected: "{\"code\":1,\"message\":\"body required\",\"details\":null}",
+		},
+		{
+			name: "init array of errors with message option",
+			err: func() ErrorHandler {
+				var (
+					ErrCodeBodyRequired = 1
+					errors              = map[int]string{
+						ErrCodeBodyRequired: "body required",
+					}
+				)
+				Init(errors)
+				return New(ErrCodeBodyRequired, Message("message option"))
+			}(),
+			expected: "{\"code\":1,\"message\":\"message option\",\"details\":null}",
+		},
+		{
+			name: "init array of errors message args",
+			err: func() ErrorHandler {
+				var (
+					ErrCodeValidation = 2
+					errors            = map[int]string{
+						ErrCodeValidation: "not valid field %s",
+					}
+				)
+				Init(errors)
+				return New(ErrCodeValidation, MessageArgs("fieldname"))
+			}(),
+			expected: "{\"code\":2,\"message\":\"not valid field fieldname\",\"details\":null}",
+		},
+	}
 
-		assert.Equal(t, 2, err.GetCode())
-		assert.Equal(t, "{\"code\":2,\"message\":\"error message\",\"details\":null,\"errors\":[]}", err.JSON())
-	})
-
-	t.Run("code, message and details", func(t *testing.T) {
-		err := New(2, Message("error message"), Detail("name", "John"))
-
-		assert.Equal(t, 2, err.GetCode())
-		assert.Equal(t, "{\"code\":2,\"message\":\"error message\",\"details\":{\"name\":\"John\"},\"errors\":[]}", err.JSON())
-	})
-
-	t.Run("error message", func(t *testing.T) {
-		err := New(2, Message("error message"), Detail("name", "John"))
-
-		assert.Equal(t, "error message", err.Error())
-	})
-
-	t.Run("details map is nil", func(t *testing.T) {
-		err := &Error{Code: 1, Message: "error message"}
-		option := Detail("name", "John")
-		option(err)
-
-		assert.Equal(t, "error message", err.Error())
-	})
-
-	t.Run("extra error", func(t *testing.T) {
-		secondError := NewMini(3, "error message 2", nil)
-		err := New(2, Message("error message"), Err(secondError))
-
-		assert.Equal(t, "error message", err.Error())
-		assert.Equal(t, "{\"code\":2,\"message\":\"error message\",\"details\":null,\"errors\":[{\"code\":3,\"message\":\"error message 2\",\"details\":null}]}", err.JSON())
-	})
-
-	t.Run("init array of errors", func(t *testing.T) {
-		var (
-			ErrCodeBodyRequired = 1
-			ErrCodeValidation   = 2
-
-			errors = map[int]string{
-				ErrCodeBodyRequired: "body required",
-				ErrCodeValidation:   "not valid field %s",
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.name == "error message" || tt.name == "details map is nil" {
+				assert.Equal(t, tt.expected, tt.err.Error())
+			} else {
+				assert.Equal(t, tt.expected, tt.err.JSON())
 			}
-		)
-		Init(errors)
-
-		t.Run("without message option", func(t *testing.T) {
-			err := New(ErrCodeBodyRequired)
-			expected := fmt.Sprintf(
-				"{\"code\":%d,\"message\":\"%s\",\"details\":null,\"errors\":[]}",
-				ErrCodeBodyRequired, errors[ErrCodeBodyRequired],
-			)
-
-			assert.Equal(t, expected, err.JSON())
 		})
+	}
+}
 
-		t.Run("with message option", func(t *testing.T) {
-			err := New(ErrCodeBodyRequired, Message("message option"))
-			expected := fmt.Sprintf(
-				"{\"code\":%d,\"message\":\"message option\",\"details\":null,\"errors\":[]}",
-				ErrCodeBodyRequired,
-			)
+func TestError_JSONOrigin(t *testing.T) {
+	err := New(1, Message("error"))
 
-			assert.Equal(t, expected, err.JSON())
-		})
+	assert.Equal(t, `{"code":1,"message":"error","details":null}`, err.JSONOrigin())
+}
 
-		t.Run("mini error without message", func(t *testing.T) {
-			err := NewMini(ErrCodeBodyRequired, "", nil)
+func TestError_GetMessage(t *testing.T) {
+	err := New(1, Message("error"))
 
-			assert.Equal(t, ErrCodeBodyRequired, err.Code)
-			assert.Equal(t, errors[ErrCodeBodyRequired], err.Message)
-		})
+	assert.Equal(t, "error", err.GetMessage())
+}
 
-		t.Run("mini error with message", func(t *testing.T) {
-			err := NewMini(ErrCodeBodyRequired, "error message", nil)
+func TestError_GetCode(t *testing.T) {
+	err := New(1, Message("error"))
 
-			assert.Equal(t, ErrCodeBodyRequired, err.Code)
-			assert.Equal(t, "error message", err.Message)
-		})
+	assert.Equal(t, 1, err.GetCode())
+}
 
-		t.Run("message args", func(t *testing.T) {
-			err := New(ErrCodeValidation, MessageArgs("fieldname"))
-			expected := fmt.Sprintf(
-				"{\"code\":%d,\"message\":\"%s\",\"details\":null,\"errors\":[]}",
-				ErrCodeValidation, fmt.Sprintf(errors[ErrCodeValidation], "fieldname"),
-			)
+func TestError_GetHTTPStatus(t *testing.T) {
+	err := New(1, HTTPStatus(400))
 
-			assert.Equal(t, expected, err.JSON())
-		})
-	})
+	assert.Equal(t, 400, err.GetHTTPStatus())
+}
 
+func TestError_GetHTTPMessage(t *testing.T) {
+	err := New(1, HTTPStatus(400))
+
+	assert.Equal(t, "Bad Request", err.GetHTTPMessage())
+}
+
+func TestError_SetCode(t *testing.T) {
+	err := &Error{}
+	err.SetCode(500)
+
+	assert.Equal(t, 500, err.Code)
 }
 
 func BenchmarkHandlerError_GoJSON(b *testing.B) {
@@ -109,13 +140,6 @@ func BenchmarkHandlerError_GoJSON(b *testing.B) {
 			Code:    400,
 			Message: "Bad Request",
 			Details: map[string]any{"field": "value"},
-			Errors: []*MiniError{
-				{
-					Code:    400,
-					Message: "Bad Request",
-					Details: map[string]any{"field": "value"},
-				},
-			},
 		}
 		_ = err.JSON()
 	}
@@ -127,13 +151,6 @@ func BenchmarkHandlerError_OriginalJSON(b *testing.B) {
 			Code:    400,
 			Message: "Bad Request",
 			Details: map[string]any{"field": "value"},
-			Errors: []*MiniError{
-				{
-					Code:    400,
-					Message: "Bad Request",
-					Details: map[string]any{"field": "value"},
-				},
-			},
 		}
 		_ = err.JSONOrigin()
 	}
