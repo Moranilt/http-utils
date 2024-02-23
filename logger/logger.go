@@ -12,20 +12,27 @@ import (
 	"log/slog"
 )
 
+type LoggerType string
+
+const (
+	TYPE_JSON    LoggerType = "json"
+	TYPE_DEFAULT LoggerType = "default"
+)
+
 type ContextKey string
 
 var defaultLogger atomic.Value
 
 func init() {
-	defaultLogger.Store(New(os.Stdout))
+	defaultLogger.Store(New(os.Stdout, TYPE_JSON))
 }
 
-func SetDefault(l *SLogger) {
+func SetDefault(l Logger) {
 	defaultLogger.Store(l)
 }
 
-func Default() *SLogger {
-	return defaultLogger.Load().(*SLogger)
+func Default() Logger {
+	return defaultLogger.Load().(Logger)
 }
 
 const (
@@ -78,11 +85,23 @@ type Logger interface {
 	WithFields(fields ...any) Logger
 }
 
-func New(output io.Writer) Logger {
-	l := slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
-		Level:       LevelTrace,
-		ReplaceAttr: renameLevel,
-	}))
+func New(output io.Writer, t LoggerType) Logger {
+	if output == nil {
+		output = os.Stdout
+	}
+
+	var l *slog.Logger
+	if t == TYPE_JSON {
+		l = slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
+			Level:       LevelTrace,
+			ReplaceAttr: renameLevel,
+		}))
+	} else {
+		l = slog.New(slog.NewTextHandler(output, &slog.HandlerOptions{
+			Level:       LevelTrace,
+			ReplaceAttr: renameLevel,
+		}))
+	}
 
 	logger := &SLogger{
 		l,
