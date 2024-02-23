@@ -13,30 +13,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Moranilt/http-utils/logger"
 	"github.com/Moranilt/http-utils/response"
 	"github.com/Moranilt/http-utils/tiny_errors"
 	"github.com/gorilla/mux"
 )
-
-type mockedLogger struct{}
-
-func NewLogger() Logger {
-	return &mockedLogger{}
-}
-
-func (l *mockedLogger) WithRequestInfo(r *http.Request) Logger {
-	return l
-}
-
-func (l *mockedLogger) With(args ...any) Logger {
-	return l
-}
-
-func (l *mockedLogger) Debug(msg string, args ...any) {}
-
-func (l *mockedLogger) Info(msg string, args ...any) {}
-
-func (l *mockedLogger) Error(msg string, args ...any) {}
 
 type mockRequest struct {
 	Name    string `json:"name,omitempty" mapstructure:"name"`
@@ -70,7 +51,7 @@ func makeMockedFunction[ReqT any, RespT any](requestValidator func(request ReqT)
 }
 
 func TestHandler(t *testing.T) {
-	logger := NewLogger()
+	logger := logger.NewMock()
 
 	t.Run("default handler Run", func(t *testing.T) {
 		routePath := "/test-route"
@@ -396,7 +377,7 @@ func TestHandler(t *testing.T) {
 }
 
 func BenchmarkMultipart(b *testing.B) {
-	logger := NewLogger()
+	logger := logger.NewMock()
 	routePath := "/test-files"
 
 	testHandler := makeMockedFunction(func(request mockMultipartRequest) *mockResponse {
@@ -490,7 +471,7 @@ func newTestHandleController[ReqT any, RespT any](
 	}
 }
 
-func (cntr *testHandleFuncController[ReqT, RespT]) Run(t testing.TB, logger Logger) {
+func (cntr *testHandleFuncController[ReqT, RespT]) Run(t testing.TB, logger logger.Logger) {
 	router := mux.NewRouter()
 	requestPath := cntr.routePath
 	if cntr.vars != nil {
