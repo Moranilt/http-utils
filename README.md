@@ -2,6 +2,7 @@
 
 - [Client](./client/README.md)
 - [Handler](./handler/README.md)
+- [Logger](./logger/README.md)
 - [Mock](./mock/README.md)
 - [Query](./query/README.md)
 - [Response](./response/README.md)
