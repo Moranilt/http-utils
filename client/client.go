@@ -34,12 +34,14 @@ type Client interface {
 	Get(ctx context.Context, url string, headers map[string]string) (*http.Response, error)
 }
 
+// Create new Client instance
 func New() Client {
 	return &client{
 		client: &http.Client{},
 	}
 }
 
+// Send request with method POST
 func (c *client) Post(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
 	request, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
 	if err != nil {
@@ -56,6 +58,7 @@ func (c *client) Post(ctx context.Context, url string, body []byte, headers map[
 	return res, nil
 }
 
+// Send request with method GET
 func (c *client) Get(ctx context.Context, url string, headers map[string]string) (*http.Response, error) {
 	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -71,11 +74,13 @@ func (c *client) Get(ctx context.Context, url string, headers map[string]string)
 	return res, nil
 }
 
+// Set request timeout
 func (c *client) setRequestTimeout(req *http.Request) (*http.Request, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(req.Context(), Timeout())
 	return req.WithContext(ctx), cancel
 }
 
+// Get IP address from request using X-Real-IP or X-Forwarded-For headers
 func GetIP(req *http.Request) string {
 	if req == nil {
 		return ""

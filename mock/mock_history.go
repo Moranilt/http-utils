@@ -41,6 +41,10 @@ func (m *MockHistory[T]) Push(name string, data T, err error) {
 }
 
 // Get retrieves a mock call from the history by name.
+//
+// If the call is not found, an error is returned.
+//
+// An event with name will be removed after call.
 func (m *MockHistory[T]) Get(name string) (*MockHistoryItem[T], error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -81,7 +85,7 @@ func (m *MockHistory[T]) IsEmpty() bool {
 	return len(m.events) == 0 && len(m.storage) == 0
 }
 
-// getNextItem returns the next mock call details from history.
+// getNextItem returns the next mock call details from history and removing it.
 func (m *MockHistory[T]) getNextItem() (*string, *MockHistoryItem[T]) {
 	if len(m.events) != 0 {
 		eventName := m.events[0]

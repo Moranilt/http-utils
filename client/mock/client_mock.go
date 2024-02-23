@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"sync"
 
 	"github.com/Moranilt/http-utils/mock"
 )
@@ -17,10 +16,7 @@ const (
 )
 
 type MockedClient struct {
-	history        *mock.MockHistory[*mockClientData]
-	wg             *sync.WaitGroup
-	expectCallback func()
-	actualCallback func()
+	history *mock.MockHistory[*mockClientData]
 }
 
 type mockClientData struct {
@@ -31,19 +27,15 @@ type mockClientData struct {
 	err      error
 }
 
-func NewMockClient(expectCallback func(), actualCallback func()) *MockedClient {
+// Create new Client instance
+func New() *MockedClient {
 	return &MockedClient{
-		history:        mock.NewMockHistory[*mockClientData](),
-		wg:             &sync.WaitGroup{},
-		expectCallback: expectCallback,
-		actualCallback: actualCallback,
+		history: mock.NewMockHistory[*mockClientData](),
 	}
 }
 
+// Store expected call of Post method with expected data and error
 func (m *MockedClient) ExpectPost(url string, body []byte, err error, response *http.Response, headers map[string]string) {
-	if m.expectCallback != nil {
-		m.expectCallback()
-	}
 	m.history.Push("Post", &mockClientData{
 		url:      url,
 		body:     body,
@@ -53,10 +45,8 @@ func (m *MockedClient) ExpectPost(url string, body []byte, err error, response *
 	}, err)
 }
 
+// Store expected call of Get method with expected data and error
 func (m *MockedClient) ExpectGet(url string, err error, response *http.Response, headers map[string]string) {
-	if m.expectCallback != nil {
-		m.expectCallback()
-	}
 	m.history.Push("Get", &mockClientData{
 		url:      url,
 		body:     nil,
@@ -66,18 +56,18 @@ func (m *MockedClient) ExpectGet(url string, err error, response *http.Response,
 	}, err)
 }
 
+// Check if all expected calls were done
 func (m *MockedClient) AllExpectationsDone() error {
 	return m.history.AllExpectationsDone()
 }
 
+// Reset all expected calls
 func (m *MockedClient) Reset() {
 	m.history.Clear()
 }
 
+// Check if call of Post method was expected and returning expected response and error
 func (m *MockedClient) Post(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
-	if m.actualCallback != nil {
-		m.actualCallback()
-	}
 	item, err := m.checkCall("Post", url, body, headers)
 	if err != nil {
 		return nil, err
@@ -86,10 +76,8 @@ func (m *MockedClient) Post(ctx context.Context, url string, body []byte, header
 	return item.Data.response, item.Data.err
 }
 
+// Check if call of Get method was expected and returning expected response and error
 func (m *MockedClient) Get(ctx context.Context, url string, headers map[string]string) (*http.Response, error) {
-	if m.actualCallback != nil {
-		m.actualCallback()
-	}
 	item, err := m.checkCall("Get", url, nil, headers)
 	if err != nil {
 		return nil, err
@@ -98,6 +86,7 @@ func (m *MockedClient) Get(ctx context.Context, url string, headers map[string]s
 	return item.Data.response, item.Data.err
 }
 
+// Check if call of method was expected and returning expected data of this call
 func (m *MockedClient) checkCall(name string, url string, body []byte, headers map[string]string) (*mock.MockHistoryItem[*mockClientData], error) {
 	item, err := m.history.Get(name)
 	if err != nil {

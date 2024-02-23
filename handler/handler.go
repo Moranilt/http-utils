@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Moranilt/http-utils/response"
 	"github.com/Moranilt/http-utils/tiny_errors"
 	"github.com/gorilla/mux"
 	"github.com/mitchellh/mapstructure"
@@ -36,8 +37,15 @@ type Logger interface {
 	Error(msg string, args ...any)
 }
 
+// A function that is called to process request.
+//
+// ReqT - type of request body
+// RespT - type of response body
 type CallerFunc[ReqT any, RespT any] func(ctx context.Context, req ReqT) (RespT, tiny_errors.ErrorHandler)
 
+// Create new handler instance
+//
+// **caller** should be a function that implements type CallerFunc[ReqT, RespT]
 func New[ReqT any, RespT any](w http.ResponseWriter, r *http.Request, logger Logger, caller CallerFunc[ReqT, RespT]) *HandlerMaker[ReqT, RespT] {
 	log := logger.WithRequestInfo(r)
 	return &HandlerMaker[ReqT, RespT]{
@@ -52,14 +60,16 @@ func (h *HandlerMaker[ReqT, RespT]) setError(errs ...string) {
 	h.err = errors.New(strings.Join(errs, ","))
 }
 
-// Request type should include fields with tags of json
+// Parsing JSON-body of request.
+//
+// # Request type should include fields with tags of json
 //
 // Example:
 //
 //	type YourRequest struct {
 //			FieldName string `json:"field_name"`
 //	}
-func (h *HandlerMaker[ReqT, RespT]) WithJson() *HandlerMaker[ReqT, RespT] {
+func (h *HandlerMaker[ReqT, RespT]) WithJSON() *HandlerMaker[ReqT, RespT] {
 	if h.err != nil {
 		return h
 	}
@@ -74,7 +84,9 @@ func (h *HandlerMaker[ReqT, RespT]) WithJson() *HandlerMaker[ReqT, RespT] {
 	return h
 }
 
-// Request type should include fields with tags of mapstructure
+// Parsing URI vars using gorilla/mux
+//
+// Request type should include fields with tags of mapstructure.
 //
 // Example:
 //
@@ -94,7 +106,9 @@ func (h *HandlerMaker[ReqT, RespT]) WithVars() *HandlerMaker[ReqT, RespT] {
 	return h
 }
 
-// Request type should include fields with tags of mapstructure
+// Parsing URL-query params from request.
+//
+// Request type should include fields with tags of mapstructure.
 //
 // Example:
 //
@@ -122,7 +136,9 @@ func (h *HandlerMaker[ReqT, RespT]) WithQuery() *HandlerMaker[ReqT, RespT] {
 	return h
 }
 
-// Request type should include fields with tags of mapstructure
+// Parsing multipart-data from request body.
+//
+// Request type should include fields with tags of mapstructure.
 //
 // If field is an array of files you should set tag name as files[] and type []*multipart.FileHeader([mime/multipart.FileHeader])
 //
@@ -135,10 +151,10 @@ func (h *HandlerMaker[ReqT, RespT]) WithQuery() *HandlerMaker[ReqT, RespT] {
 //   - []*multipart.FileHeader -	field with array of files. Should contain square brackets in name
 //   - *multipart.FileHeader -	field with single file. Should not contain square brackets in field name
 //
-// # Example
+// Example
 //
 //	type YourRequest struct {
-//		MultipleFiles []*multipart.FileHeader `mapstructure:"your_files[]"`
+//		MultipleFiles []*multipart.FileHeader `mapstructure:"multiple_files[]"`
 //		SingleFile *multipart.FileHeader 	`mapstructure:"single_file"`
 //		Name string `mapstructure:"name"`
 //	}
@@ -189,19 +205,20 @@ func (h *HandlerMaker[ReqT, RespT]) WithMultipart(maxMemory int64) *HandlerMaker
 	return h
 }
 
+// Run handler and send response with status code
 func (h *HandlerMaker[ReqT, RespT]) Run(successStatus int) {
 	h.logger.With("body", h.requestBody).Info("request")
 	if h.err != nil {
 		h.logger.Error(h.err.Error())
-		ErrorResponse(h.response, h.err, http.StatusBadRequest)
+		response.ErrorResponse(h.response, h.err, http.StatusBadRequest)
 		return
 	}
 
 	resp, err := h.caller(h.request.Context(), h.requestBody)
 	if err != nil {
 		h.logger.Error(err.Error())
-		ErrorResponse(h.response, err, err.GetHTTPStatus())
+		response.ErrorResponse(h.response, err, err.GetHTTPStatus())
 		return
 	}
-	SuccessResponse(h.response, resp, successStatus)
+	response.SuccessResponse(h.response, resp, successStatus)
 }

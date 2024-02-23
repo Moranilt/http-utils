@@ -71,7 +71,7 @@ func TestMockHttpUtil(t *testing.T) {
 
 	for _, test := range postClientTests {
 		t.Run(test.name, func(t *testing.T) {
-			mockClient := NewMockClient(nil, nil)
+			mockClient := New()
 
 			if test.runExpect {
 				mockClient.ExpectPost(test.url, test.body, nil, test.response, nil)
@@ -94,7 +94,7 @@ func TestMockHttpUtil(t *testing.T) {
 
 	for _, test := range getClientTests {
 		t.Run(test.name, func(t *testing.T) {
-			mockClient := NewMockClient(nil, nil)
+			mockClient := New()
 
 			if test.runExpect {
 				mockClient.ExpectGet(test.url, nil, test.response, nil)
@@ -157,7 +157,7 @@ var checkCallTests = []struct {
 func TestHttpCheckCall(t *testing.T) {
 	for _, test := range checkCallTests {
 		t.Run(test.name, func(t *testing.T) {
-			mockClient := NewMockClient(nil, nil)
+			mockClient := New()
 
 			if test.runExpects {
 				mockClient.ExpectPost(test.expectedURL, test.expectedBody, nil, &http.Response{
@@ -178,7 +178,7 @@ func TestHttpCheckCall(t *testing.T) {
 }
 
 func TestHttpClientReset(t *testing.T) {
-	mockClient := NewMockClient(nil, nil)
+	mockClient := New()
 	mockClient.ExpectGet("http://test.com", nil, &http.Response{StatusCode: http.StatusOK}, nil)
 
 	mockClient.Reset()
