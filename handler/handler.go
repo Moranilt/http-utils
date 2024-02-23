@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Moranilt/http-utils/logger"
 	"github.com/Moranilt/http-utils/response"
 	"github.com/Moranilt/http-utils/tiny_errors"
 	"github.com/gorilla/mux"
@@ -23,18 +24,9 @@ type HandlerMaker[ReqT any, RespT any] struct {
 	request     *http.Request
 	response    http.ResponseWriter
 	requestBody ReqT
-	logger      Logger
+	logger      logger.Logger
 	caller      CallerFunc[ReqT, RespT]
 	err         error
-}
-
-type Logger interface {
-	WithRequestInfo(r *http.Request) Logger
-	With(args ...any) Logger
-
-	Debug(msg string, args ...any)
-	Info(msg string, args ...any)
-	Error(msg string, args ...any)
 }
 
 // A function that is called to process request.
@@ -46,7 +38,7 @@ type CallerFunc[ReqT any, RespT any] func(ctx context.Context, req ReqT) (RespT,
 // Create new handler instance
 //
 // **caller** should be a function that implements type CallerFunc[ReqT, RespT]
-func New[ReqT any, RespT any](w http.ResponseWriter, r *http.Request, logger Logger, caller CallerFunc[ReqT, RespT]) *HandlerMaker[ReqT, RespT] {
+func New[ReqT any, RespT any](w http.ResponseWriter, r *http.Request, logger logger.Logger, caller CallerFunc[ReqT, RespT]) *HandlerMaker[ReqT, RespT] {
 	log := logger.WithRequestInfo(r)
 	return &HandlerMaker[ReqT, RespT]{
 		logger:   log,
