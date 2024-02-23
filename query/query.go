@@ -22,7 +22,16 @@ func ValidOrderType(val string) bool {
 
 type Query struct {
 	// main is the base SQL query string
-	main string
+	main []string
+
+	// where is the WHERE clause
+	where *Where
+
+	// groupBy is the GROUP BY clause
+	groupBy string
+
+	// other fields
+	having string
 
 	// order is the ORDER BY clause
 	order string
@@ -32,17 +41,59 @@ type Query struct {
 
 	// offset is the OFFSET clause
 	offset string
-
-	// where is the WHERE clause
-	where *Where
 }
 
 // New creates a new Query with the given base SQL query string
 func New(q string) *Query {
 	return &Query{
-		main:  q,
+		main:  []string{q},
 		where: &Where{},
 	}
+}
+
+func (q *Query) InnerJoin(table string, on string) *Query {
+	if isEmpty(table) || isEmpty(on) {
+		return q
+	}
+
+	q.main = append(q.main, fmt.Sprintf("INNER JOIN %s ON %s", table, on))
+	return q
+}
+
+func (q *Query) LeftJoin(table string, on string) *Query {
+	if isEmpty(table) || isEmpty(on) {
+		return q
+	}
+
+	q.main = append(q.main, fmt.Sprintf("LEFT JOIN %s ON %s", table, on))
+	return q
+}
+
+func (q *Query) RightJoin(table string, on string) *Query {
+	if isEmpty(table) || isEmpty(on) {
+		return q
+	}
+
+	q.main = append(q.main, fmt.Sprintf("RIGHT JOIN %s ON %s", table, on))
+	return q
+}
+
+func (q *Query) FullJoin(table string, on string) *Query {
+	if isEmpty(table) || isEmpty(on) {
+		return q
+	}
+
+	q.main = append(q.main, fmt.Sprintf("FULL JOIN %s ON %s", table, on))
+	return q
+}
+
+func (q *Query) CrossJoin(table string) *Query {
+	if isEmpty(table) {
+		return q
+	}
+
+	q.main = append(q.main, fmt.Sprintf("CROSS JOIN %s", table))
+	return q
 }
 
 // Where returns the WHERE clause for adding conditions
@@ -53,13 +104,30 @@ func (q *Query) Where() *Where {
 // String returns the full SQL query string
 func (q *Query) String() string {
 	var where string
+	var groupBy string
+	var having string
+
 	if len(q.where.chunks) > 0 {
 		where = "WHERE " + strings.Join(q.where.chunks, " AND ")
 	}
 
-	items := []string{where, q.order, q.limit, q.offset}
-	var result strings.Builder
-	result.WriteString(q.main)
+	if q.groupBy != "" {
+		groupBy = q.groupBy
+	}
+
+	if q.having != "" && q.groupBy != "" {
+		having = q.having
+	}
+
+	var (
+		items     = []string{where, groupBy, q.order, having, q.limit, q.offset}
+		mainQuery = strings.Join(q.main, " ")
+
+		result strings.Builder
+	)
+
+	result.WriteString(mainQuery)
+
 	for _, item := range items {
 		if len(item) != 0 {
 			result.WriteString(" " + item)
@@ -98,19 +166,25 @@ func (q *Query) Offset(val string) *Query {
 
 // The Where struct represents the WHERE clause in a SQL query.
 // It contains a chunks slice to hold the individual WHERE conditions.
-
 type Where struct {
 	chunks []string
 }
 
 // EQ adds an equality condition to the WHERE clause.
 func (w *Where) EQ(fieldName string, value string) *Where {
+	if isEmpty(value) || isEmpty(fieldName) {
+		return w
+	}
+
 	w.chunks = append(w.chunks, EQ(fieldName, value))
 	return w
 }
 
 // LIKE adds a LIKE condition to the WHERE clause.
 func (w *Where) LIKE(fieldName string, value string) *Where {
+	if isEmpty(value) || isEmpty(fieldName) {
+		return w
+	}
 	w.chunks = append(w.chunks, LIKE(fieldName, value))
 	return w
 }
@@ -148,7 +222,7 @@ func EQ(fieldName string, value string) string {
 
 // LIKE creates a LIKE condition string.
 func LIKE(fieldName string, value string) string {
-	return fmt.Sprintf("%s LIKE '%%%s%%'", fieldName, value)
+	return fmt.Sprintf("%s LIKE '%s'", fieldName, value)
 }
 
 // OR creates an OR condition string from the provided arguments.
@@ -157,4 +231,28 @@ func OR(args ...string) string {
 		return ""
 	}
 	return fmt.Sprintf("(%s)", strings.Join(args, " OR "))
+}
+
+// GroupBy adds a GROUP BY clause to the query
+func (q *Query) GroupBy(columns ...string) *Query {
+	if len(columns) == 0 {
+		return q
+	}
+
+	q.groupBy = fmt.Sprintf("GROUP BY %s", strings.Join(columns, ", "))
+	return q
+}
+
+// Having adds a HAVING clause to the query
+func (q *Query) Having(condition string) *Query {
+	if condition == "" {
+		return q
+	}
+
+	q.having = fmt.Sprintf("HAVING %s", condition)
+	return q
+}
+
+func isEmpty(s string) bool {
+	return len(s) == 0
 }
