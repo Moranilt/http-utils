@@ -49,3 +49,9 @@ func (m *MockLogger) WithField(key string, value any) Logger {
 func (m *MockLogger) WithFields(fields ...any) Logger {
 	return m
 }
+
+func (m *MockLogger) WithRequestId(ctx context.Context) Logger {
+	return m
+}
+
+func (m *MockLogger) InfoContext(ctx context.Context, msg string, args ...any) {}
