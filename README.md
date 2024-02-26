@@ -1,6 +1,7 @@
 # HTTP utilities for http_template
 
 - [Client](./client/README.md)
+- [Clients](./clients/README.md)
 - [Handler](./handler/README.md)
 - [Logger](./logger/README.md)
 - [Mock](./mock/README.md)
