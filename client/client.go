@@ -48,6 +48,10 @@ func (c *client) Post(ctx context.Context, url string, body []byte, headers map[
 		return nil, err
 	}
 
+	for key, value := range headers {
+		request.Header.Set(key, value)
+	}
+
 	request, cancel := c.setRequestTimeout(request)
 	res, err := c.client.Do(request)
 	if err != nil {
@@ -64,6 +68,11 @@ func (c *client) Get(ctx context.Context, url string, headers map[string]string)
 	if err != nil {
 		return nil, err
 	}
+
+	for key, value := range headers {
+		request.Header.Set(key, value)
+	}
+
 	request, cancel := c.setRequestTimeout(request)
 	res, err := c.client.Do(request)
 	if err != nil {

@@ -38,6 +38,14 @@ func TestPost(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK, got %d", resp.StatusCode)
 	}
+
+	if resp.Request.Method != http.MethodPost {
+		t.Errorf("Expected method POST, got %s", resp.Request.Method)
+	}
+
+	if resp.Request.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Request.Header.Get("Content-Type"))
+	}
 }
 
 func TestGet(t *testing.T) {
@@ -66,5 +74,13 @@ func TestGet(t *testing.T) {
 	// Verify response
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status OK, got %d", resp.StatusCode)
+	}
+
+	if resp.Request.Method != http.MethodGet {
+		t.Errorf("Expected method GET, got %s", resp.Request.Method)
+	}
+
+	if resp.Request.Header.Get("Accept") != "application/json" {
+		t.Errorf("Expected Accept application/json, got %s", resp.Request.Header.Get("Accept"))
 	}
 }
