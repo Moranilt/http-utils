@@ -49,9 +49,9 @@ func (c *client) Post(ctx context.Context, url string, body []byte, headers map[
 	}
 
 	request, cancel := c.setRequestTimeout(request)
-	defer cancel()
 	res, err := c.client.Do(request)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
@@ -65,9 +65,9 @@ func (c *client) Get(ctx context.Context, url string, headers map[string]string)
 		return nil, err
 	}
 	request, cancel := c.setRequestTimeout(request)
-	defer cancel()
 	res, err := c.client.Do(request)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
