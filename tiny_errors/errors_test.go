@@ -134,6 +134,12 @@ func TestError_SetCode(t *testing.T) {
 	assert.Equal(t, 500, err.Code)
 }
 
+func TestError_GetDetails(t *testing.T) {
+	err := New(1, Detail("name", "John"))
+
+	assert.Equal(t, map[string]any{"name": "John"}, err.GetDetails())
+}
+
 func BenchmarkHandlerError_GoJSON(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := &Error{

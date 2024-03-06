@@ -49,6 +49,7 @@ type ErrorHandler interface {
 	GetHTTPMessage() string
 	GetCode() int
 	GetMessage() string
+	GetDetails() map[string]any
 }
 
 // PropertySetter defines methods to set error properties like message,
@@ -97,6 +98,11 @@ func (e *Error) GetHTTPStatus() int {
 // Returns the HTTP message associated with the error.
 func (e *Error) GetHTTPMessage() string {
 	return e.httpMessage
+}
+
+// Returns the details map of the Error.
+func (e *Error) GetDetails() map[string]any {
+	return e.Details
 }
 
 // Sets the code field of the Error.
