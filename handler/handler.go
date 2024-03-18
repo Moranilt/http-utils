@@ -150,6 +150,40 @@ func (h *HandlerMaker[ReqT, RespT]) WithQuery() *HandlerMaker[ReqT, RespT] {
 //		SingleFile *multipart.FileHeader 	`mapstructure:"single_file"`
 //		Name string `mapstructure:"name"`
 //	}
+//
+// # Supported nested structures.
+//
+// Example:
+//
+//	type Recipient struct {
+//		Name string `json:"name,omitempty" mapstructure:"name"`
+//		Age  string `json:"age,omitempty" mapstructure:"age"`
+//	}
+//
+//	type CreateOrder struct {
+//		Recipient  Recipient               `json:"recipient" mapstructure:"recipient"`
+//		Content    map[string]string       `json:"content" mapstructure:"content"`
+//	}
+//
+// Request body(multipart-form):
+//
+//	{
+//		"recipient[name]": "John",
+//		"recipient[age]": "30",
+//		"content[title]": "content title",
+//		"content[body]": "content body"
+//	}
+//
+// Result:
+//
+//	func main() {
+//		// ...
+//		var order CreateOrder
+//		fmt.Println(order.Recipient.Name) // John
+//		fmt.Println(order.Recipient.Age) // 30
+//		fmt.Println(order.Content["title"]) // content title
+//		fmt.Println(order.Content["body"]) // content body
+//	}
 func (h *HandlerMaker[ReqT, RespT]) WithMultipart(maxMemory int64) *HandlerMaker[ReqT, RespT] {
 	if h.err != nil {
 		return h
@@ -171,7 +205,15 @@ func (h *HandlerMaker[ReqT, RespT]) WithMultipart(maxMemory int64) *HandlerMaker
 	result := make(map[string]any, len(h.request.MultipartForm.Value)+len(h.request.MultipartForm.File))
 	for name, value := range h.request.MultipartForm.Value {
 		if len(value) > 0 {
-			result[name] = value[0]
+			fieldName, subName, validName := extractSubName(name)
+			if validName {
+				if _, ok := result[fieldName]; !ok {
+					result[fieldName] = make(map[string]any)
+				}
+				result[fieldName].(map[string]any)[subName] = value[0]
+			} else {
+				result[name] = value[0]
+			}
 		}
 	}
 
