@@ -25,10 +25,18 @@ type mockRequest struct {
 	Message string `json:"message,omitempty" mapstructure:"message"`
 }
 
+type mockRecipient struct {
+	Name string `json:"name,omitempty" mapstructure:"name"`
+	Age  string `json:"age,omitempty" mapstructure:"age"`
+}
+
 type mockMultipartRequest struct {
-	Files []*multipart.FileHeader `json:"files" mapstructure:"files"`
-	Name  string                  `json:"name" mapstructure:"name"`
-	Age   string                  `json:"age" mapstructure:"age"`
+	Files      []*multipart.FileHeader `json:"files" mapstructure:"files"`
+	SingleFile *multipart.FileHeader   `json:"single_file" mapstructure:"single_file"`
+	Name       string                  `json:"name" mapstructure:"name"`
+	Age        string                  `json:"age" mapstructure:"age"`
+	Recipient  mockRecipient           `json:"recipient" mapstructure:"recipient"`
+	Content    map[string]string       `json:"content" mapstructure:"content"`
 }
 
 type mockResponse struct {
@@ -340,6 +348,18 @@ func TestHandler(t *testing.T) {
 				}
 			}
 
+			if request.SingleFile == nil {
+				return &mockResponse{
+					Info: "single file field is empty",
+				}
+			}
+
+			if request.SingleFile.Filename == "" {
+				return &mockResponse{
+					Info: "single file filename is empty",
+				}
+			}
+
 			if request.Name == "" {
 				return &mockResponse{
 					Info: errNameRequired,
@@ -349,6 +369,30 @@ func TestHandler(t *testing.T) {
 			if request.Age == "" {
 				return &mockResponse{
 					Info: "age required",
+				}
+			}
+
+			if request.Recipient.Age == "" {
+				return &mockResponse{
+					Info: "recipient age required",
+				}
+			}
+
+			if request.Recipient.Name == "" {
+				return &mockResponse{
+					Info: "recipient name required",
+				}
+			}
+
+			if request.Content["title"] == "" {
+				return &mockResponse{
+					Info: "content title required",
+				}
+			}
+
+			if request.Content["body"] == "" {
+				return &mockResponse{
+					Info: "content body required",
 				}
 			}
 
@@ -564,6 +608,22 @@ func mockedMultipartData(t testing.TB) *multipartData {
 			name:  "age",
 			value: []byte("20"),
 		},
+		{
+			name:  "recipient[name]",
+			value: []byte("Elizabeth"),
+		},
+		{
+			name:  "recipient[age]",
+			value: []byte("21"),
+		},
+		{
+			name:  "content[title]",
+			value: []byte("Content Title"),
+		},
+		{
+			name:  "content[body]",
+			value: []byte("Content Body"),
+		},
 	}
 
 	var requestBody bytes.Buffer
@@ -609,6 +669,22 @@ func mockedMultipartData(t testing.TB) *multipartData {
 		}
 		io.Copy(fw, newFile)
 	}
+
+	newFile, err := os.Create("single_file.json")
+	if err != nil {
+		t.Errorf("create file: %v", err)
+		return nil
+	}
+
+	newFile.WriteString("{\"name\": \"Elizabeth\"}")
+	defer os.Remove(newFile.Name())
+
+	fw, err := w.CreateFormFile("single_file", newFile.Name())
+	if err != nil {
+		t.Errorf("create form file: %v", err)
+		return nil
+	}
+	io.Copy(fw, newFile)
 
 	return &multipartData{
 		data:   &requestBody,

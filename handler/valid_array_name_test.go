@@ -73,3 +73,50 @@ func BenchmarkValidArrayName(b *testing.B) {
 		isValidNameArray("sahgdjhgajhds[]")
 	}
 }
+
+func TestExtractSubName(t *testing.T) {
+	tests := []struct {
+		name           string
+		field          string
+		expected_start string
+		expected_sub   string
+		valid          bool
+	}{
+		{
+			name:           "valid array name",
+			field:          "content[title]",
+			expected_start: "content",
+			expected_sub:   "title",
+			valid:          true,
+		},
+		{
+			name:           "not valid name",
+			field:          "content[]",
+			expected_start: "content[]",
+			expected_sub:   "",
+			valid:          false,
+		},
+		{
+			name:           "not valid name",
+			field:          "content",
+			expected_start: "content",
+			expected_sub:   "",
+			valid:          false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			start, sub, valid := extractSubName(test.field)
+			if valid != test.valid {
+				t.Errorf("got %t, expected %t", valid, test.valid)
+			}
+			if start != test.expected_start {
+				t.Errorf("got %s, expected %s", start, test.expected_start)
+			}
+			if sub != test.expected_sub {
+				t.Errorf("got %s, expected %s", sub, test.expected_sub)
+			}
+		})
+	}
+}
