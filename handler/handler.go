@@ -93,11 +93,23 @@ func (h *HandlerMaker[ReqT, RespT]) WithVars() *HandlerMaker[ReqT, RespT] {
 		return h
 	}
 	vars := mux.Vars(h.request)
-	err := mapstructure.Decode(vars, &h.requestBody)
+	cfg := &mapstructure.DecoderConfig{
+		WeaklyTypedInput: true,
+		Result:           &h.requestBody,
+	}
+
+	decoder, err := mapstructure.NewDecoder(cfg)
 	if err != nil {
 		h.setError(ErrNotValidBodyFormat, err.Error())
 		return h
 	}
+
+	err = decoder.Decode(vars)
+	if err != nil {
+		h.setError(ErrNotValidBodyFormat, err.Error())
+		return h
+	}
+
 	return h
 }
 
@@ -123,11 +135,24 @@ func (h *HandlerMaker[ReqT, RespT]) WithQuery() *HandlerMaker[ReqT, RespT] {
 	for name, q := range query {
 		queryVars[name] = q[0]
 	}
-	err := mapstructure.Decode(queryVars, &h.requestBody)
+
+	cfg := &mapstructure.DecoderConfig{
+		WeaklyTypedInput: true,
+		Result:           &h.requestBody,
+	}
+
+	decoder, err := mapstructure.NewDecoder(cfg)
 	if err != nil {
 		h.setError(ErrNotValidBodyFormat, err.Error())
 		return h
 	}
+
+	err = decoder.Decode(queryVars)
+	if err != nil {
+		h.setError(ErrNotValidBodyFormat, err.Error())
+		return h
+	}
+
 	return h
 }
 

@@ -23,6 +23,7 @@ type mockRequest struct {
 	Name    string `json:"name,omitempty" mapstructure:"name"`
 	Phone   string `json:"phone,omitempty" mapstructure:"phone"`
 	Message string `json:"message,omitempty" mapstructure:"message"`
+	Age     int    `json:"age,omitempty" mapstructure:"age"`
 }
 
 type mockRecipient struct {
@@ -146,15 +147,22 @@ func TestHandler(t *testing.T) {
 	})
 
 	t.Run("Run with Vars request", func(t *testing.T) {
-		routePath := "/test-route/{phone}"
+		routePath := "/test-route/{phone}/{age}"
 		vars := map[string]string{
 			"{phone}": "phone_number",
+			"{age}":   "10",
 		}
 
 		testHandler := makeMockedFunction(func(request mockRequest) *mockResponse {
 			if request.Phone != "phone_number" {
 				return &mockResponse{
 					Info: errPhoneRequired,
+				}
+			}
+
+			if request.Age != 10 {
+				return &mockResponse{
+					Info: "age is not 10",
 				}
 			}
 
@@ -190,6 +198,12 @@ func TestHandler(t *testing.T) {
 				}
 			}
 
+			if request.Age != 10 {
+				return &mockResponse{
+					Info: "age is not 10",
+				}
+			}
+
 			return &mockResponse{
 				Info: successInfo,
 			}
@@ -210,21 +224,29 @@ func TestHandler(t *testing.T) {
 
 		query := url.Values{}
 		query.Set("phone", "phone_number")
+		query.Set("age", "10")
 
 		test := newTestHandleController(routePath, testHandler, responseValidator, nil, nil, query, nil)
 		test.Run(t, logger)
 	})
 
 	t.Run("Run with Json and Vars request", func(t *testing.T) {
-		routePath := "/test-route/{phone}"
+		routePath := "/test-route/{phone}/{age}"
 		vars := map[string]string{
 			"{phone}": "phone_number",
+			"{age}":   "10",
 		}
 
 		testHandler := makeMockedFunction(func(request mockRequest) *mockResponse {
 			if request.Phone != "phone_number" {
 				return &mockResponse{
 					Info: errPhoneRequired,
+				}
+			}
+
+			if request.Age != 10 {
+				return &mockResponse{
+					Info: "age is not 10",
 				}
 			}
 
@@ -282,6 +304,12 @@ func TestHandler(t *testing.T) {
 				}
 			}
 
+			if request.Age != 10 {
+				return &mockResponse{
+					Info: "age is not 10",
+				}
+			}
+
 			if request.Name == "" {
 				return &mockResponse{
 					Info: errNameRequired,
@@ -332,6 +360,7 @@ func TestHandler(t *testing.T) {
 
 		query := url.Values{}
 		query.Set("message", "message")
+		query.Set("age", "10")
 
 		test := newTestHandleController(routePath, testHandler, responseValidator, body, vars, query, nil)
 		test.Run(t, logger)
