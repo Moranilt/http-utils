@@ -230,7 +230,18 @@ func (h *HandlerMaker[ReqT, RespT]) WithMultipart(maxMemory int64) *HandlerMaker
 		}
 	}
 
-	err = mapstructure.Decode(result, &h.requestBody)
+	cfg := &mapstructure.DecoderConfig{
+		WeaklyTypedInput: true,
+		Result:           &h.requestBody,
+	}
+
+	decoder, err := mapstructure.NewDecoder(cfg)
+	if err != nil {
+		h.setError(ErrNotValidBodyFormat, err.Error())
+		return h
+	}
+
+	err = decoder.Decode(result)
 	if err != nil {
 		h.setError(ErrNotValidBodyFormat, err.Error())
 		return h
