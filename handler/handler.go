@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -20,13 +19,17 @@ const (
 	ErrEmptyMultipartData = "empty multipart form data "
 )
 
+const (
+	ERR_CODE_UnexpectedBody = 999
+)
+
 type HandlerMaker[ReqT any, RespT any] struct {
 	request     *http.Request
 	response    http.ResponseWriter
 	requestBody ReqT
 	logger      logger.Logger
 	caller      CallerFunc[ReqT, RespT]
-	err         error
+	err         tiny_errors.ErrorHandler
 }
 
 // A function that is called to process request.
@@ -49,7 +52,7 @@ func New[ReqT any, RespT any](w http.ResponseWriter, r *http.Request, logger log
 }
 
 func (h *HandlerMaker[ReqT, RespT]) setError(errs ...string) {
-	h.err = errors.New(strings.Join(errs, ","))
+	h.err = tiny_errors.New(ERR_CODE_UnexpectedBody, tiny_errors.Message(strings.Join(errs, ",")))
 }
 
 // Parsing JSON-body of request.
