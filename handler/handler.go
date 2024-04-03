@@ -282,14 +282,14 @@ func (h *HandlerMaker[ReqT, RespT]) WithMultipart(maxMemory int64) *HandlerMaker
 func (h *HandlerMaker[ReqT, RespT]) Run(successStatus int) {
 	h.logger.With("body", h.requestBody).Info("request")
 	if h.err != nil {
-		h.logger.Error(h.err.Error(), "details", h.err.GetDetails())
+		h.logger.Error(h.err.Error(), "code", h.err.GetCode(), "details", h.err.GetDetails())
 		response.ErrorResponse(h.response, h.err, http.StatusBadRequest)
 		return
 	}
 
 	resp, err := h.caller(h.request.Context(), h.requestBody)
 	if err != nil {
-		h.logger.Error(err.Error(), "details", err.GetDetails())
+		h.logger.Error(err.Error(), "code", err.GetCode(), "details", err.GetDetails())
 		response.ErrorResponse(h.response, err, err.GetHTTPStatus())
 		return
 	}
