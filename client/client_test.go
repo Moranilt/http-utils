@@ -25,7 +25,7 @@ func TestPost(t *testing.T) {
 	var tests = []struct {
 		name     string
 		method   string
-		executor func(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
+		executor func(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error)
 	}{
 		{
 			name:     "Post",
@@ -54,9 +54,9 @@ func TestPost(t *testing.T) {
 			// Create request
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			reqHeaders := map[string]string{
+			reqHeaders := NewHeaders(map[string]string{
 				"Content-Type": "application/json",
-			}
+			})
 
 			resp, err := test.executor(ctx, server.URL, []byte(`{"key":"value"}`), reqHeaders)
 			if err != nil {
@@ -83,9 +83,9 @@ func TestGet(t *testing.T) {
 	// Create request
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	reqHeaders := map[string]string{
+	reqHeaders := NewHeaders(map[string]string{
 		"Accept": "application/json",
-	}
+	})
 
 	// Call Get method
 	resp, err := c.Get(ctx, server.URL, reqHeaders)
@@ -121,9 +121,9 @@ func TestGetWithTimeout(t *testing.T) {
 	// Create request with a timeout shorter than the server delay
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
-	reqHeaders := map[string]string{
+	reqHeaders := NewHeaders(map[string]string{
 		"Accept": "application/json",
-	}
+	})
 
 	// Call Get method
 	_, err := c.Get(ctx, server.URL, reqHeaders)

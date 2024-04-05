@@ -21,12 +21,12 @@ type MockedClient struct {
 }
 
 type Expecter interface {
-	ExpectPost(url string, body []byte, err error, response *http.Response, headers map[string]string)
-	ExpectPut(url string, body []byte, err error, response *http.Response, headers map[string]string)
-	ExpectPatch(url string, body []byte, err error, response *http.Response, headers map[string]string)
-	ExpectDelete(url string, body []byte, err error, response *http.Response, headers map[string]string)
-	ExpectGet(url string, err error, response *http.Response, headers map[string]string)
-	ExpectDo(url string, method Method, body []byte, err error, response *http.Response, headers map[string]string)
+	ExpectPost(url string, body []byte, err error, response *http.Response, headers Headers)
+	ExpectPut(url string, body []byte, err error, response *http.Response, headers Headers)
+	ExpectPatch(url string, body []byte, err error, response *http.Response, headers Headers)
+	ExpectDelete(url string, body []byte, err error, response *http.Response, headers Headers)
+	ExpectGet(url string, err error, response *http.Response, headers Headers)
+	ExpectDo(url string, method Method, body []byte, err error, response *http.Response, headers Headers)
 
 	AllExpectationsDone() error
 	Reset()
@@ -41,7 +41,7 @@ type mockClientData struct {
 	url      string
 	body     []byte
 	response *http.Response
-	headers  map[string]string
+	headers  Headers
 	err      error
 	method   Method
 }
@@ -54,7 +54,7 @@ func NewMock() Mocker {
 }
 
 // Store expected call of Post method with expected data and error
-func (m *MockedClient) ExpectDo(url string, method Method, body []byte, err error, response *http.Response, headers map[string]string) {
+func (m *MockedClient) ExpectDo(url string, method Method, body []byte, err error, response *http.Response, headers Headers) {
 	m.history.Push("Do", &mockClientData{
 		url:      url,
 		body:     body,
@@ -66,7 +66,7 @@ func (m *MockedClient) ExpectDo(url string, method Method, body []byte, err erro
 }
 
 // Store expected call of Post method with expected data and error
-func (m *MockedClient) ExpectPost(url string, body []byte, err error, response *http.Response, headers map[string]string) {
+func (m *MockedClient) ExpectPost(url string, body []byte, err error, response *http.Response, headers Headers) {
 	m.history.Push("Post", &mockClientData{
 		url:      url,
 		body:     body,
@@ -78,7 +78,7 @@ func (m *MockedClient) ExpectPost(url string, body []byte, err error, response *
 }
 
 // Store expected call of Post method with expected data and error
-func (m *MockedClient) ExpectPut(url string, body []byte, err error, response *http.Response, headers map[string]string) {
+func (m *MockedClient) ExpectPut(url string, body []byte, err error, response *http.Response, headers Headers) {
 	m.history.Push("Put", &mockClientData{
 		url:      url,
 		body:     body,
@@ -90,7 +90,7 @@ func (m *MockedClient) ExpectPut(url string, body []byte, err error, response *h
 }
 
 // Store expected call of Post method with expected data and error
-func (m *MockedClient) ExpectPatch(url string, body []byte, err error, response *http.Response, headers map[string]string) {
+func (m *MockedClient) ExpectPatch(url string, body []byte, err error, response *http.Response, headers Headers) {
 	m.history.Push("Patch", &mockClientData{
 		url:      url,
 		body:     body,
@@ -102,7 +102,7 @@ func (m *MockedClient) ExpectPatch(url string, body []byte, err error, response 
 }
 
 // Store expected call of Post method with expected data and error
-func (m *MockedClient) ExpectDelete(url string, body []byte, err error, response *http.Response, headers map[string]string) {
+func (m *MockedClient) ExpectDelete(url string, body []byte, err error, response *http.Response, headers Headers) {
 	m.history.Push("Delete", &mockClientData{
 		url:      url,
 		body:     body,
@@ -114,7 +114,7 @@ func (m *MockedClient) ExpectDelete(url string, body []byte, err error, response
 }
 
 // Store expected call of Get method with expected data and error
-func (m *MockedClient) ExpectGet(url string, err error, response *http.Response, headers map[string]string) {
+func (m *MockedClient) ExpectGet(url string, err error, response *http.Response, headers Headers) {
 	m.history.Push("Get", &mockClientData{
 		url:      url,
 		body:     nil,
@@ -136,7 +136,7 @@ func (m *MockedClient) Reset() {
 }
 
 // Check if call of Post method was expected and returning expected response and error
-func (m *MockedClient) Post(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (m *MockedClient) Post(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 	item, err := m.checkCall("Post", MethodPost, url, body, headers)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (m *MockedClient) Post(ctx context.Context, url string, body []byte, header
 }
 
 // Check if call of Post method was expected and returning expected response and error
-func (m *MockedClient) Put(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (m *MockedClient) Put(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 	item, err := m.checkCall("Put", MethodPut, url, body, headers)
 	if err != nil {
 		return nil, err
@@ -156,7 +156,7 @@ func (m *MockedClient) Put(ctx context.Context, url string, body []byte, headers
 }
 
 // Check if call of Post method was expected and returning expected response and error
-func (m *MockedClient) Patch(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (m *MockedClient) Patch(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 	item, err := m.checkCall("Patch", MethodPatch, url, body, headers)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func (m *MockedClient) Patch(ctx context.Context, url string, body []byte, heade
 }
 
 // Check if call of Post method was expected and returning expected response and error
-func (m *MockedClient) Delete(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (m *MockedClient) Delete(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 	item, err := m.checkCall("Delete", MethodDelete, url, body, headers)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func (m *MockedClient) Delete(ctx context.Context, url string, body []byte, head
 }
 
 // Check if call of Get method was expected and returning expected response and error
-func (m *MockedClient) Get(ctx context.Context, url string, headers map[string]string) (*http.Response, error) {
+func (m *MockedClient) Get(ctx context.Context, url string, headers Headers) (*http.Response, error) {
 	item, err := m.checkCall("Get", MethodGet, url, nil, headers)
 	if err != nil {
 		return nil, err
@@ -185,7 +185,7 @@ func (m *MockedClient) Get(ctx context.Context, url string, headers map[string]s
 	return item.Data.response, item.Data.err
 }
 
-func (m *MockedClient) Do(ctx context.Context, method Method, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (m *MockedClient) Do(ctx context.Context, method Method, url string, body []byte, headers Headers) (*http.Response, error) {
 	item, err := m.checkCall("Do", method, url, body, headers)
 	if err != nil {
 		return nil, err
@@ -195,7 +195,7 @@ func (m *MockedClient) Do(ctx context.Context, method Method, url string, body [
 }
 
 // Check if call of method was expected and returning expected data of this call
-func (m *MockedClient) checkCall(name string, method Method, url string, body []byte, headers map[string]string) (*mock.MockHistoryItem[*mockClientData], error) {
+func (m *MockedClient) checkCall(name string, method Method, url string, body []byte, headers Headers) (*mock.MockHistoryItem[*mockClientData], error) {
 	item, err := m.history.Get(name)
 	if err != nil {
 		return nil, err
