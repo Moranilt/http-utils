@@ -71,46 +71,46 @@ func TestMockHttpUtil(t *testing.T) {
 	var testMethods = []struct {
 		name       string
 		method     string
-		expectFunc func(url string, body []byte, err error, response *http.Response, headers map[string]string)
-		executor   func(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
+		expectFunc func(url string, body []byte, err error, response *http.Response, headers Headers)
+		executor   func(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error)
 	}{
 		{
 			name:   "Post",
 			method: http.MethodPost,
-			expectFunc: func(url string, body []byte, err error, response *http.Response, headers map[string]string) {
+			expectFunc: func(url string, body []byte, err error, response *http.Response, headers Headers) {
 				mockClient.ExpectPost(url, body, err, response, headers)
 			},
-			executor: func(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+			executor: func(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 				return mockClient.Post(ctx, url, body, headers)
 			},
 		},
 		{
 			name:   "Put",
 			method: http.MethodPut,
-			expectFunc: func(url string, body []byte, err error, response *http.Response, headers map[string]string) {
+			expectFunc: func(url string, body []byte, err error, response *http.Response, headers Headers) {
 				mockClient.ExpectPut(url, body, err, response, headers)
 			},
-			executor: func(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+			executor: func(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 				return mockClient.Put(ctx, url, body, headers)
 			},
 		},
 		{
 			name:   "Patch",
 			method: http.MethodPatch,
-			expectFunc: func(url string, body []byte, err error, response *http.Response, headers map[string]string) {
+			expectFunc: func(url string, body []byte, err error, response *http.Response, headers Headers) {
 				mockClient.ExpectPatch(url, body, err, response, headers)
 			},
-			executor: func(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+			executor: func(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 				return mockClient.Patch(ctx, url, body, headers)
 			},
 		},
 		{
 			name:   "Delete",
 			method: http.MethodDelete,
-			expectFunc: func(url string, body []byte, err error, response *http.Response, headers map[string]string) {
+			expectFunc: func(url string, body []byte, err error, response *http.Response, headers Headers) {
 				mockClient.ExpectDelete(url, body, err, response, headers)
 			},
-			executor: func(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+			executor: func(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 				return mockClient.Delete(ctx, url, body, headers)
 			},
 		},

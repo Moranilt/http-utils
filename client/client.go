@@ -40,13 +40,13 @@ type client struct {
 }
 
 type Client interface {
-	Post(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
-	Put(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
-	Patch(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
-	Delete(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
-	Get(ctx context.Context, url string, headers map[string]string) (*http.Response, error)
+	Post(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error)
+	Put(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error)
+	Patch(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error)
+	Delete(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error)
+	Get(ctx context.Context, url string, headers Headers) (*http.Response, error)
 
-	Do(ctx context.Context, method Method, url string, body []byte, headers map[string]string) (*http.Response, error)
+	Do(ctx context.Context, method Method, url string, body []byte, headers Headers) (*http.Response, error)
 }
 
 // Create new Client instance
@@ -57,38 +57,38 @@ func New() Client {
 }
 
 // Send request with method POST
-func (c *client) Post(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (c *client) Post(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 	return c.Do(ctx, MethodPost, url, body, headers)
 }
 
 // Send request with method PUT
-func (c *client) Put(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (c *client) Put(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 	return c.Do(ctx, MethodPut, url, body, headers)
 }
 
 // Send request with method PATCH
-func (c *client) Patch(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (c *client) Patch(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 	return c.Do(ctx, MethodPatch, url, body, headers)
 }
 
 // Send request with method DELETE
-func (c *client) Delete(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (c *client) Delete(ctx context.Context, url string, body []byte, headers Headers) (*http.Response, error) {
 	return c.Do(ctx, MethodDelete, url, body, headers)
 }
 
 // Send request with method GET
-func (c *client) Get(ctx context.Context, url string, headers map[string]string) (*http.Response, error) {
+func (c *client) Get(ctx context.Context, url string, headers Headers) (*http.Response, error) {
 	return c.Do(ctx, MethodGet, url, nil, headers)
 }
 
-func (c *client) Do(ctx context.Context, method Method, url string, body []byte, headers map[string]string) (*http.Response, error) {
+func (c *client) Do(ctx context.Context, method Method, url string, body []byte, headers Headers) (*http.Response, error) {
 	request, err := http.NewRequestWithContext(ctx, string(method), url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
 
-	for key, value := range headers {
-		request.Header.Set(key, value)
+	for _, key := range headers.Keys() {
+		request.Header.Set(key, headers.Get(key))
 	}
 
 	request, cancel := c.setRequestTimeout(request)
