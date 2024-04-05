@@ -9,6 +9,16 @@ import (
 	"time"
 )
 
+type Method string
+
+const (
+	MethodGet    Method = http.MethodGet
+	MethodPost   Method = http.MethodPost
+	MethodPut    Method = http.MethodPut
+	MethodPatch  Method = http.MethodPatch
+	MethodDelete Method = http.MethodDelete
+)
+
 var timeout atomic.Value
 
 func init() {
@@ -31,7 +41,12 @@ type client struct {
 
 type Client interface {
 	Post(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
+	Put(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
+	Patch(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
+	Delete(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error)
 	Get(ctx context.Context, url string, headers map[string]string) (*http.Response, error)
+
+	Do(ctx context.Context, method Method, url string, body []byte, headers map[string]string) (*http.Response, error)
 }
 
 // Create new Client instance
@@ -43,28 +58,31 @@ func New() Client {
 
 // Send request with method POST
 func (c *client) Post(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
-	request, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
-	if err != nil {
-		return nil, err
-	}
+	return c.Do(ctx, MethodPost, url, body, headers)
+}
 
-	for key, value := range headers {
-		request.Header.Set(key, value)
-	}
+// Send request with method PUT
+func (c *client) Put(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+	return c.Do(ctx, MethodPut, url, body, headers)
+}
 
-	request, cancel := c.setRequestTimeout(request)
-	res, err := c.client.Do(request)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
+// Send request with method PATCH
+func (c *client) Patch(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+	return c.Do(ctx, MethodPatch, url, body, headers)
+}
 
-	return res, nil
+// Send request with method DELETE
+func (c *client) Delete(ctx context.Context, url string, body []byte, headers map[string]string) (*http.Response, error) {
+	return c.Do(ctx, MethodDelete, url, body, headers)
 }
 
 // Send request with method GET
 func (c *client) Get(ctx context.Context, url string, headers map[string]string) (*http.Response, error) {
-	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	return c.Do(ctx, MethodGet, url, nil, headers)
+}
+
+func (c *client) Do(ctx context.Context, method Method, url string, body []byte, headers map[string]string) (*http.Response, error) {
+	request, err := http.NewRequestWithContext(ctx, string(method), url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
