@@ -87,8 +87,10 @@ func (c *client) Do(ctx context.Context, method Method, url string, body []byte,
 		return nil, err
 	}
 
-	for _, key := range headers.Keys() {
-		request.Header.Set(key, headers.Get(key))
+	if headers != nil {
+		for _, key := range headers.Keys() {
+			request.Header.Set(key, headers.Get(key))
+		}
 	}
 
 	request, cancel := c.setRequestTimeout(request)
