@@ -260,4 +260,26 @@ func TestHttpCheckCall(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("with headers", func(t *testing.T) {
+		mockClient := &MockedClient{
+			history: mock.NewMockHistory[*mockClientData](),
+		}
+
+		expectedHeaders := NewHeaders(map[string]string{"Content-Type": "application/json"})
+		actualHeaders := NewHeaders(map[string]string{"Content-Type": "text/html"})
+		mockClient.ExpectGet("http://localhost", nil, &http.Response{
+			StatusCode: http.StatusOK,
+		}, expectedHeaders)
+
+		_, err := mockClient.checkCall(
+			"Get",
+			"GET",
+			"http://localhost",
+			nil,
+			actualHeaders,
+		)
+		assert.NotNil(t, err)
+		assert.Equal(t, fmt.Errorf(ERR_Unexpected_Headers, "Get", expectedHeaders, actualHeaders).Error(), err.Error())
+	})
 }

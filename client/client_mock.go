@@ -213,8 +213,8 @@ func (m *MockedClient) checkCall(name string, method Method, url string, body []
 		return nil, fmt.Errorf(ERR_Unexpected_Data, name, string(item.Data.body), string(body))
 	}
 
-	if !reflect.DeepEqual(item.Data.headers, headers) {
-		return nil, fmt.Errorf(ERR_Unexpected_Headers, name, item.Data.headers, headers)
+	if item.Data.headers != nil && headers != nil && !reflect.DeepEqual(item.Data.headers.Value(), headers.Value()) {
+		return nil, fmt.Errorf(ERR_Unexpected_Headers, name, item.Data.headers.Value(), headers.Value())
 	}
 
 	return item, nil
