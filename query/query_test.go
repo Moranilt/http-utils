@@ -67,7 +67,7 @@ var tests = []testItem{
 			query.Where().EQ("name", "testname")
 			return query.String()
 		},
-		expected: "SELECT * FROM test_table WHERE name='testname'",
+		expected: "SELECT * FROM test_table WHERE name = 'testname'",
 	},
 	{
 		name: "where LIKE",
@@ -85,7 +85,7 @@ var tests = []testItem{
 			query.Where().OR(EQ("name", "testname"), EQ("age", "12"))
 			return query.String()
 		},
-		expected: "SELECT * FROM test_table WHERE (name='testname' OR age='12')",
+		expected: "SELECT * FROM test_table WHERE (name = 'testname' OR age = '12')",
 	},
 	{
 		name: "where OR AND",
@@ -94,7 +94,7 @@ var tests = []testItem{
 			query.Where().OR(EQ("name", "testname"), EQ("age", "12")).AND(EQ("id", "123"), EQ("email", "test@mail.com"))
 			return query.String()
 		},
-		expected: "SELECT * FROM test_table WHERE (name='testname' OR age='12') AND (id='123' AND email='test@mail.com')",
+		expected: "SELECT * FROM test_table WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com')",
 	},
 	{
 		name: "not valid ORDER",
@@ -205,7 +205,7 @@ var tests = []testItem{
 			query.Where().OR(EQ("name", "testname"), AND(EQ("age", "10"), EQ("city", "New York")))
 			return query.String()
 		},
-		expected: "SELECT * FROM test_table WHERE (name='testname' OR (age='10' AND city='New York'))",
+		expected: "SELECT * FROM test_table WHERE (name = 'testname' OR (age = '10' AND city = 'New York'))",
 	},
 	{
 		name: "nested AND OR",
@@ -214,7 +214,7 @@ var tests = []testItem{
 			query.Where().AND(EQ("name", "testname"), OR(EQ("age", "10"), EQ("city", "New York")))
 			return query.String()
 		},
-		expected: "SELECT * FROM test_table WHERE (name='testname' AND (age='10' OR city='New York'))",
+		expected: "SELECT * FROM test_table WHERE (name = 'testname' AND (age = '10' OR city = 'New York'))",
 	},
 	{
 		name: "inner join",
@@ -336,7 +336,7 @@ var tests = []testItem{
 			query.Where().EQ("name", "John")
 			return query.String()
 		},
-		expected: "SELECT * FROM users WHERE name='John' GROUP BY name HAVING COUNT(id) > 10",
+		expected: "SELECT * FROM users WHERE name = 'John' GROUP BY name HAVING COUNT(id) > 10",
 	},
 	{
 		// HAVING after GROUP BY
@@ -354,6 +354,51 @@ var tests = []testItem{
 			return query.String()
 		},
 		expected: "SELECT * FROM users",
+	},
+	{
+		name: "using IS NULL",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM users")
+			query.Where().IS("name", nil)
+			return query.String()
+		},
+		expected: "SELECT * FROM users WHERE name IS NULL",
+	},
+	{
+		name: "using IS NULL and OR",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM users")
+			query.Where().OR(IS("name", nil), EQ("name", "John"))
+			return query.String()
+		},
+		expected: "SELECT * FROM users WHERE (name IS NULL OR name = 'John')",
+	},
+	{
+		name: "using EQ with int type",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM users")
+			query.Where().EQ("age", 12)
+			return query.String()
+		},
+		expected: "SELECT * FROM users WHERE age = 12",
+	},
+	{
+		name: "using EQ with float64 type",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM users")
+			query.Where().EQ("age", 12.5)
+			return query.String()
+		},
+		expected: "SELECT * FROM users WHERE age = 12.5",
+	},
+	{
+		name: "using EQ with bool type",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM users")
+			query.Where().EQ("blocked", true)
+			return query.String()
+		},
+		expected: "SELECT * FROM users WHERE blocked = true",
 	},
 }
 
@@ -375,5 +420,5 @@ func ExampleQuery() {
 		AND(EQ("id", "123"), EQ("email", "test@mail.com")).
 		LIKE("name", "%testname")
 	fmt.Println(query.String())
-	// Output: SELECT * FROM test_table LEFT JOIN test_posts ON test_table.id=test_posts.user_id WHERE (name='testname' OR age='12') AND (id='123' AND email='test@mail.com') AND name LIKE '%testname' ORDER BY name DESC LIMIT 5 OFFSET 1
+	// Output: SELECT * FROM test_table LEFT JOIN test_posts ON test_table.id=test_posts.user_id WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com') AND name LIKE '%testname' ORDER BY name DESC LIMIT 5 OFFSET 1
 }

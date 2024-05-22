@@ -171,8 +171,8 @@ type Where struct {
 }
 
 // EQ adds an equality condition to the WHERE clause.
-func (w *Where) EQ(fieldName string, value string) *Where {
-	if isEmpty(value) || isEmpty(fieldName) {
+func (w *Where) EQ(fieldName string, value any) *Where {
+	if isEmpty(fieldName) {
 		return w
 	}
 
@@ -181,8 +181,8 @@ func (w *Where) EQ(fieldName string, value string) *Where {
 }
 
 // LIKE adds a LIKE condition to the WHERE clause.
-func (w *Where) LIKE(fieldName string, value string) *Where {
-	if isEmpty(value) || isEmpty(fieldName) {
+func (w *Where) LIKE(fieldName string, value any) *Where {
+	if isEmpty(fieldName) {
 		return w
 	}
 	w.chunks = append(w.chunks, LIKE(fieldName, value))
@@ -207,6 +207,15 @@ func (w *Where) AND(args ...string) *Where {
 	return w
 }
 
+func (w *Where) IS(fieldName string, value any) *Where {
+	if isEmpty(fieldName) {
+		return w
+	}
+
+	w.chunks = append(w.chunks, IS(fieldName, value))
+	return w
+}
+
 // AND creates an AND condition string from the provided arguments.
 func AND(args ...string) string {
 	if len(args) < 2 {
@@ -216,13 +225,36 @@ func AND(args ...string) string {
 }
 
 // EQ creates an equality condition string.
-func EQ(fieldName string, value string) string {
-	return fmt.Sprintf("%s='%s'", fieldName, value)
+func EQ(fieldName string, value any) string {
+	return buildComparison(fieldName, value, "=")
 }
 
 // LIKE creates a LIKE condition string.
-func LIKE(fieldName string, value string) string {
-	return fmt.Sprintf("%s LIKE '%s'", fieldName, value)
+func LIKE(fieldName string, value any) string {
+	return buildComparison(fieldName, value, "LIKE")
+}
+
+func buildComparison(fieldName string, value any, comparison string) string {
+	if isEmpty(fieldName) {
+		panic("fieldName cannot be empty")
+	}
+	switch value.(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return fmt.Sprintf("%s %s %d", fieldName, comparison, value)
+	case float32, float64:
+		return fmt.Sprintf("%s %s %v", fieldName, comparison, value)
+	case string:
+		if value == "NULL" || value == "null" {
+			return fmt.Sprintf("%s %s NULL", fieldName, comparison)
+		}
+		return fmt.Sprintf("%s %s '%s'", fieldName, comparison, value)
+	case bool:
+		return fmt.Sprintf("%s %s %t", fieldName, comparison, value)
+	case nil:
+		return fmt.Sprintf("%s %s NULL", fieldName, comparison)
+	default:
+		panic("not supported type. Supports only numbers, string, bool")
+	}
 }
 
 // OR creates an OR condition string from the provided arguments.
@@ -231,6 +263,11 @@ func OR(args ...string) string {
 		return ""
 	}
 	return fmt.Sprintf("(%s)", strings.Join(args, " OR "))
+}
+
+// IS creates an IS condition string from the provided arguments.
+func IS(fieldName string, value any) string {
+	return buildComparison(fieldName, value, "IS")
 }
 
 // GroupBy adds a GROUP BY clause to the query
