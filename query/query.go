@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/Moranilt/http-utils/validators"
@@ -238,6 +239,16 @@ func buildComparison(fieldName string, value any, comparison string) string {
 	if isEmpty(fieldName) {
 		panic("fieldName cannot be empty")
 	}
+	v := reflect.ValueOf(value)
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			value = nil
+		} else if v.IsValid() {
+			value = v.Elem().Interface()
+		} else {
+			panic("not supported type. Supports only numbers, string, bool, nil")
+		}
+	}
 	switch value.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return fmt.Sprintf("%s %s %d", fieldName, comparison, value)
@@ -253,7 +264,7 @@ func buildComparison(fieldName string, value any, comparison string) string {
 	case nil:
 		return fmt.Sprintf("%s %s NULL", fieldName, comparison)
 	default:
-		panic("not supported type. Supports only numbers, string, bool")
+		panic("not supported type. Supports only numbers, string, bool, nil")
 	}
 }
 
