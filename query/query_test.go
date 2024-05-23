@@ -365,6 +365,16 @@ var tests = []testItem{
 		expected: "SELECT * FROM users WHERE name IS NULL",
 	},
 	{
+		name: "using IS NULL where name is pointer string",
+		callback: func(t *testing.T) string {
+			var name *string
+			query := New("SELECT * FROM users")
+			query.Where().IS("name", name)
+			return query.String()
+		},
+		expected: "SELECT * FROM users WHERE name IS NULL",
+	},
+	{
 		name: "using IS NULL and OR",
 		callback: func(t *testing.T) string {
 			query := New("SELECT * FROM users")
