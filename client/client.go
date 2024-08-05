@@ -93,10 +93,9 @@ func (c *client) Do(ctx context.Context, method Method, url string, body []byte,
 		}
 	}
 
-	request, cancel := c.setRequestTimeout(request)
+	request, _ = c.setRequestTimeout(request)
 	res, err := c.client.Do(request)
 	if err != nil {
-		cancel()
 		return nil, err
 	}
 
