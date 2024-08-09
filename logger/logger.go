@@ -25,10 +25,10 @@ var defaultLogger atomic.Value
 var loggerLevel atomic.Value
 
 func init() {
-	defaultLogger.Store(New(os.Stdout, TYPE_JSON))
 	programLevel := new(slog.LevelVar)
 	programLevel.Set(LevelTrace)
 	loggerLevel.Store(programLevel)
+	defaultLogger.Store(New(os.Stdout, TYPE_JSON))
 }
 
 func SetDefault(l Logger) {
