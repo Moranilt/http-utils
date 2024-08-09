@@ -22,13 +22,22 @@ const (
 type ContextKey string
 
 var defaultLogger atomic.Value
+var loggerLevel atomic.Value
 
 func init() {
+	programLevel := new(slog.LevelVar)
+	programLevel.Set(LevelTrace)
+	loggerLevel.Store(programLevel)
 	defaultLogger.Store(New(os.Stdout, TYPE_JSON))
 }
 
 func SetDefault(l Logger) {
 	defaultLogger.Store(l)
+}
+
+func SetLevel(level slog.Level) {
+	programLevel := loggerLevel.Load().(*slog.LevelVar)
+	programLevel.Set(level)
 }
 
 func Default() Logger {
@@ -91,16 +100,20 @@ func New(output io.Writer, t LoggerType) Logger {
 	if output == nil {
 		output = os.Stdout
 	}
-
+	programLevel := loggerLevel.Load().(*slog.LevelVar)
+	if programLevel == nil {
+		programLevel = new(slog.LevelVar)
+		programLevel.Set(LevelTrace)
+	}
 	var l *slog.Logger
 	if t == TYPE_JSON {
 		l = slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
-			Level:       LevelTrace,
+			Level:       programLevel,
 			ReplaceAttr: renameLevel,
 		}))
 	} else {
 		l = slog.New(slog.NewTextHandler(output, &slog.HandlerOptions{
-			Level:       LevelTrace,
+			Level:       programLevel,
 			ReplaceAttr: renameLevel,
 		}))
 	}
