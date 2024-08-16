@@ -404,11 +404,90 @@ var tests = []testItem{
 	{
 		name: "using EQ with bool type",
 		callback: func(t *testing.T) string {
-			query := New("SELECT * FROM users")
-			query.Where().EQ("blocked", true)
+			query := New("SELECT * FROM users").Where().EQ("blocked", true).Query()
 			return query.String()
 		},
 		expected: "SELECT * FROM users WHERE blocked = true",
+	},
+	{
+		name: "insert columns",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "age")
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, age)",
+	},
+	{
+		name: "insert columns with single values with int",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "age").Values("John", 12)
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, age) VALUES ('John', 12)",
+	},
+	{
+		name: "insert columns with single values with boolean",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "valid").Values("John", true).Values("Jane", false)
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, valid) VALUES ('John', true), ('Jane', false)",
+	},
+	{
+		name: "insert columns with single values with null",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "valid").Values("John", nil)
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, valid) VALUES ('John', NULL)",
+	},
+	{
+		name: "insert columns with single values with float64 and float32",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "cost").Values("John", float32(12.5)).Values("Jane", float64(13.55557))
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, cost) VALUES ('John', 12.5), ('Jane', 13.55557)",
+	},
+	{
+		name: "insert columns with single values with now() function",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "date").Values("John", "now()")
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, date) VALUES ('John', NOW())",
+	},
+	{
+		name: "insert columns with single values with uuid() function",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "id").Values("John", "uuid()")
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, id) VALUES ('John', UUID())",
+	},
+	{
+		name: "insert columns with single values with question mark",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "id").Values("?", "?")
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, id) VALUES (?, ?)",
+	},
+	{
+		name: "insert columns with multiple values",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "age").Values("John", 12).Values("Doe", 13).Values("Jane", 14)
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, age) VALUES ('John', 12), ('Doe', 13), ('Jane', 14)",
+	},
+	{
+		name: "insert columns with multiple values with returning",
+		callback: func(t *testing.T) string {
+			query := New("INSERT INTO table_name").InsertColumns("name", "age").Values("John", 12).Values("Doe", 13).Values("Jane", 14).Returning("id", "name", "age")
+			return query.String()
+		},
+		expected: "INSERT INTO table_name (name, age) VALUES ('John', 12), ('Doe', 13), ('Jane', 14) RETURNING id, name, age",
 	},
 }
 
@@ -423,12 +502,34 @@ func TestQuery(t *testing.T) {
 	}
 }
 
-func ExampleQuery() {
-	query := New("SELECT * FROM test_table").LeftJoin("test_posts", "test_table.id=test_posts.user_id").Order("name", DESC).Limit("5").Offset("1")
-	query.Where().
+func ExampleQuery_String() {
+	query := New("SELECT * FROM test_table").LeftJoin("test_posts", "test_table.id=test_posts.user_id").Order("name", DESC).Limit("5").Offset("1").Where().
 		OR(EQ("name", "testname"), EQ("age", "12")).
 		AND(EQ("id", "123"), EQ("email", "test@mail.com")).
-		LIKE("name", "%testname")
+		LIKE("name", "%testname").Query()
 	fmt.Println(query.String())
 	// Output: SELECT * FROM test_table LEFT JOIN test_posts ON test_table.id=test_posts.user_id WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com') AND name LIKE '%testname' ORDER BY name DESC LIMIT 5 OFFSET 1
+}
+
+func ExampleQuery_InsertColumns() {
+	query := New("INSERT INTO table_name").InsertColumns("name", "age").
+		Values("John", 12).Values("Doe", 13).Values("Jane", 14).
+		Returning("id", "name", "age")
+	fmt.Println(query.String())
+	// Output: INSERT INTO table_name (name, age) VALUES ('John', 12), ('Doe', 13), ('Jane', 14) RETURNING id, name, age
+}
+
+func ExampleQuery_Where() {
+	query := New("SELECT * FROM test_table").Where().OR(EQ("name", "testname"), EQ("age", "12")).Query()
+	fmt.Println(query.String())
+
+	query.Where().AND(EQ("id", "123"), EQ("email", "test@mail.com"))
+	fmt.Println(query.String())
+
+	query.Where().LIKE("name", "%testname").Query()
+	fmt.Println(query.String())
+	// Output:
+	// SELECT * FROM test_table WHERE (name = 'testname' OR age = '12')
+	// SELECT * FROM test_table WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com')
+	// SELECT * FROM test_table WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com') AND name LIKE '%testname'
 }
