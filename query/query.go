@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/Moranilt/http-utils/validators"
@@ -15,6 +16,26 @@ const (
 	ASC = "ASC"
 )
 
+type WhereClause interface {
+	// EQ creates an equality condition for the specified field and value
+	EQ(fieldName string, value any) WhereClause
+
+	// LIKE creates a LIKE condition for the specified field and value
+	LIKE(fieldName string, value any) WhereClause
+
+	// OR creates an OR condition with the given arguments
+	OR(args ...string) WhereClause
+
+	// AND creates an AND condition with the given arguments
+	AND(args ...string) WhereClause
+
+	// IS creates an IS condition for the specified field and value
+	IS(fieldName string, value any) WhereClause
+
+	// Query returns the Query object associated with this WhereClause
+	Query() *Query
+}
+
 // ValidOrderType checks if the given string is a valid ordering type
 func ValidOrderType(val string) bool {
 	val = strings.ToUpper(val)
@@ -25,8 +46,11 @@ type Query struct {
 	// main is the base SQL query string
 	main []string
 
+	// the SET clause
+	sets []string
+
 	// where is the WHERE clause
-	where *Where
+	where []string
 
 	// groupBy is the GROUP BY clause
 	groupBy string
@@ -42,13 +66,21 @@ type Query struct {
 
 	// offset is the OFFSET clause
 	offset string
+
+	// insertColumns is the columns to be inserted into the table
+	insertColumns []string
+
+	// values is the values to be inserted into the table
+	values [][]any
+
+	// returning is the RETURNING clause
+	returning []string
 }
 
 // New creates a new Query with the given base SQL query string
 func New(q string) *Query {
 	return &Query{
-		main:  []string{q},
-		where: &Where{},
+		main: []string{q},
 	}
 }
 
@@ -97,42 +129,91 @@ func (q *Query) CrossJoin(table string) *Query {
 	return q
 }
 
-// Where returns the WHERE clause for adding conditions
-func (q *Query) Where() *Where {
-	return q.where
+func (q *Query) Returning(fields ...string) *Query {
+	if len(fields) == 0 {
+		return q
+	}
+
+	q.returning = fields
+	return q
 }
 
-// String returns the full SQL query string
+func (q *Query) Set(name string, value any) *Query {
+	if name != "" {
+		q.sets = append(q.sets, fmt.Sprintf("%s = %s", name, wrapValue(value)))
+	}
+	return q
+}
+
+func (q *Query) Query() *Query {
+	return q
+}
+
+// Sets the columns to be inserted in an INSERT statement.
+func (q *Query) InsertColumns(columns ...string) *Query {
+	q.insertColumns = columns
+	return q
+}
+
+// Appends the provided values to the list of values to be inserted in an
+// INSERT statement.
+func (q *Query) Values(values ...any) *Query {
+	q.values = append(q.values, values)
+	return q
+}
+
+// Where returns the WHERE clause for adding conditions
+func (q *Query) Where() WhereClause {
+	return q
+}
+
+// Returns the full SQL query string
 func (q *Query) String() string {
-	var where string
-	var groupBy string
-	var having string
+	var result strings.Builder
 
-	if len(q.where.chunks) > 0 {
-		where = "WHERE " + strings.Join(q.where.chunks, " AND ")
+	result.WriteString(strings.Join(q.main, " "))
+
+	appendIfNotEmpty := func(s string) {
+		if s != "" {
+			result.WriteByte(' ')
+			result.WriteString(s)
+		}
 	}
 
-	if q.groupBy != "" {
-		groupBy = q.groupBy
+	if len(q.sets) > 0 {
+		result.WriteString(" SET ")
+		result.WriteString(strings.Join(q.sets, ", "))
 	}
+
+	if len(q.where) > 0 {
+		result.WriteString(" WHERE ")
+		result.WriteString(strings.Join(q.where, " AND "))
+	}
+
+	appendIfNotEmpty(q.groupBy)
 
 	if q.having != "" && q.groupBy != "" {
-		having = q.having
+		appendIfNotEmpty(q.having)
 	}
 
-	var (
-		items     = []string{where, groupBy, q.order, having, q.limit, q.offset}
-		mainQuery = strings.Join(q.main, " ")
+	if len(q.insertColumns) > 0 {
+		result.WriteString(" (")
+		result.WriteString(strings.Join(q.insertColumns, ", "))
+		result.WriteByte(')')
+	}
 
-		result strings.Builder
-	)
+	if len(q.values) > 0 {
+		result.WriteByte(' ')
+		result.WriteString(buildValues(q.values))
+	}
 
-	result.WriteString(mainQuery)
+	appendIfNotEmpty(q.order)
+	appendIfNotEmpty(q.limit)
+	appendIfNotEmpty(q.offset)
 
-	for _, item := range items {
-		if len(item) != 0 {
-			result.WriteString(" " + item)
-		}
+	if len(q.returning) > 0 {
+		result.WriteString(" RETURNING ")
+		result.WriteString(strings.Join(q.returning, ", "))
 	}
 
 	return result.String()
@@ -165,55 +246,49 @@ func (q *Query) Offset(val string) *Query {
 	return q
 }
 
-// The Where struct represents the WHERE clause in a SQL query.
-// It contains a chunks slice to hold the individual WHERE conditions.
-type Where struct {
-	chunks []string
-}
-
 // EQ adds an equality condition to the WHERE clause.
-func (w *Where) EQ(fieldName string, value any) *Where {
+func (w *Query) EQ(fieldName string, value any) WhereClause {
 	if isEmpty(fieldName) {
 		return w
 	}
 
-	w.chunks = append(w.chunks, EQ(fieldName, value))
+	w.where = append(w.where, EQ(fieldName, value))
 	return w
 }
 
 // LIKE adds a LIKE condition to the WHERE clause.
-func (w *Where) LIKE(fieldName string, value any) *Where {
+func (w *Query) LIKE(fieldName string, value any) WhereClause {
 	if isEmpty(fieldName) {
 		return w
 	}
-	w.chunks = append(w.chunks, LIKE(fieldName, value))
+	w.where = append(w.where, LIKE(fieldName, value))
 	return w
 }
 
 // OR adds an OR condition to the WHERE clause.
-func (w *Where) OR(args ...string) *Where {
+func (w *Query) OR(args ...string) WhereClause {
 	if len(args) < 2 {
 		return w
 	}
-	w.chunks = append(w.chunks, OR(args...))
+	w.where = append(w.where, OR(args...))
 	return w
 }
 
 // AND adds an AND condition to the WHERE clause.
-func (w *Where) AND(args ...string) *Where {
+func (w *Query) AND(args ...string) WhereClause {
 	if len(args) < 2 {
 		return w
 	}
-	w.chunks = append(w.chunks, AND(args...))
+	w.where = append(w.where, AND(args...))
 	return w
 }
 
-func (w *Where) IS(fieldName string, value any) *Where {
+func (w *Query) IS(fieldName string, value any) WhereClause {
 	if isEmpty(fieldName) {
 		return w
 	}
 
-	w.chunks = append(w.chunks, IS(fieldName, value))
+	w.where = append(w.where, IS(fieldName, value))
 	return w
 }
 
@@ -266,6 +341,61 @@ func buildComparison(fieldName string, value any, comparison string) string {
 	default:
 		panic("not supported type. Supports only numbers, string, bool, nil")
 	}
+}
+
+func wrapValue(value any) string {
+	if value == nil {
+		return "NULL"
+	}
+
+	v := reflect.ValueOf(value)
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return "NULL"
+		}
+		value = v.Elem().Interface()
+	}
+
+	switch v := value.(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return strconv.FormatInt(reflect.ValueOf(v).Int(), 10)
+	case float32, float64:
+		return strconv.FormatFloat(reflect.ValueOf(v).Float(), 'f', -1, 64)
+	case string:
+		switch strings.ToUpper(v) {
+		case "NULL", "NOW()", "UUID()":
+			return strings.ToUpper(v)
+		case "?":
+			return "?"
+		default:
+			return "'" + v + "'"
+		}
+	case bool:
+		return strconv.FormatBool(v)
+	default:
+		panic("unsupported type: only numbers, string, bool, nil are supported")
+	}
+}
+
+func buildValues(values [][]any) string {
+	var builder strings.Builder
+	builder.WriteString("VALUES ")
+
+	for i, row := range values {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteByte('(')
+		for j, value := range row {
+			if j > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString(wrapValue(value))
+		}
+		builder.WriteByte(')')
+	}
+
+	return builder.String()
 }
 
 // OR creates an OR condition string from the provided arguments.
