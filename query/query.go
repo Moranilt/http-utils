@@ -46,6 +46,9 @@ type Query struct {
 	// main is the base SQL query string
 	main []string
 
+	// the SET clause
+	sets []string
+
 	// where is the WHERE clause
 	where []string
 
@@ -135,6 +138,13 @@ func (q *Query) Returning(fields ...string) *Query {
 	return q
 }
 
+func (q *Query) Set(name string, value any) *Query {
+	if name != "" {
+		q.sets = append(q.sets, fmt.Sprintf("%s = %s", name, wrapValue(value)))
+	}
+	return q
+}
+
 func (q *Query) Query() *Query {
 	return q
 }
@@ -168,6 +178,11 @@ func (q *Query) String() string {
 			result.WriteByte(' ')
 			result.WriteString(s)
 		}
+	}
+
+	if len(q.sets) > 0 {
+		result.WriteString(" SET ")
+		result.WriteString(strings.Join(q.sets, ", "))
 	}
 
 	if len(q.where) > 0 {

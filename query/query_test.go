@@ -489,6 +489,38 @@ var tests = []testItem{
 		},
 		expected: "INSERT INTO table_name (name, age) VALUES ('John', 12), ('Doe', 13), ('Jane', 14) RETURNING id, name, age",
 	},
+	{
+		name: "update with set value",
+		callback: func(t *testing.T) string {
+			query := New("UPDATE table_name").Set("name", "John")
+			return query.String()
+		},
+		expected: "UPDATE table_name SET name = 'John'",
+	},
+	{
+		name: "update with set value with where",
+		callback: func(t *testing.T) string {
+			query := New("UPDATE table_name").Set("name", "John").Where().EQ("age", 12).Query()
+			return query.String()
+		},
+		expected: "UPDATE table_name SET name = 'John' WHERE age = 12",
+	},
+	{
+		name: "update with set multiple value with where",
+		callback: func(t *testing.T) string {
+			query := New("UPDATE table_name").Set("name", "John").Set("age", 20).Where().EQ("age", 12).Query()
+			return query.String()
+		},
+		expected: "UPDATE table_name SET name = 'John', age = 20 WHERE age = 12",
+	},
+	{
+		name: "update with set multiple value with where and returning",
+		callback: func(t *testing.T) string {
+			query := New("UPDATE table_name").Set("name", "John").Set("age", 20).Where().EQ("age", 12).Query().Returning("id", "name", "age")
+			return query.String()
+		},
+		expected: "UPDATE table_name SET name = 'John', age = 20 WHERE age = 12 RETURNING id, name, age",
+	},
 }
 
 func TestQuery(t *testing.T) {
@@ -532,4 +564,19 @@ func ExampleQuery_Where() {
 	// SELECT * FROM test_table WHERE (name = 'testname' OR age = '12')
 	// SELECT * FROM test_table WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com')
 	// SELECT * FROM test_table WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com') AND name LIKE '%testname'
+}
+
+func ExampleQuery_Set() {
+	query := New("UPDATE table_name").Set("name", "John").Where().EQ("age", 12).Query()
+	fmt.Println(query.String())
+
+	query.Set("age", 20)
+	fmt.Println(query.String())
+
+	query.Set("country", "USA").Set("city", "New York").Set("accepted", true).Set("updated_at", "now()")
+	fmt.Println(query.String())
+	// Output:
+	// UPDATE table_name SET name = 'John' WHERE age = 12
+	// UPDATE table_name SET name = 'John', age = 20 WHERE age = 12
+	// UPDATE table_name SET name = 'John', age = 20, country = 'USA', city = 'New York', accepted = true, updated_at = NOW() WHERE age = 12
 }
