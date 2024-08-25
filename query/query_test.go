@@ -530,6 +530,24 @@ var tests = []testItem{
 		expected: "SELECT * FROM table_name WHERE name IN ('John')",
 	},
 	{
+		name: "where in clause with array value",
+		callback: func(t *testing.T) string {
+			names := []string{"John", "Jane", "Kevin"}
+			query := New("SELECT * FROM table_name").Where().IN("name", names).Query()
+			return query.String()
+		},
+		expected: "SELECT * FROM table_name WHERE name IN ('John','Jane','Kevin')",
+	},
+	{
+		name: "where in clause with two array values",
+		callback: func(t *testing.T) string {
+			names := []string{"John", "Jane", "Kevin"}
+			query := New("SELECT * FROM table_name").Where().IN("name", names, names).Query()
+			return query.String()
+		},
+		expected: "SELECT * FROM table_name WHERE name IN ('John','Jane','Kevin','John','Jane','Kevin')",
+	},
+	{
 		name: "where in clause with multiple values",
 		callback: func(t *testing.T) string {
 			query := New("SELECT * FROM table_name").Where().IN("name", "John", "Jane", "Kevin").Query()
