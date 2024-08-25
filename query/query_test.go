@@ -521,6 +521,38 @@ var tests = []testItem{
 		},
 		expected: "UPDATE table_name SET name = 'John', age = 20 WHERE age = 12 RETURNING id, name, age",
 	},
+	{
+		name: "where in clause with single value",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM table_name").Where().IN("name", "John").Query()
+			return query.String()
+		},
+		expected: "SELECT * FROM table_name WHERE name IN ('John')",
+	},
+	{
+		name: "where in clause with multiple values",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM table_name").Where().IN("name", "John", "Jane", "Kevin").Query()
+			return query.String()
+		},
+		expected: "SELECT * FROM table_name WHERE name IN ('John','Jane','Kevin')",
+	},
+	{
+		name: "where in clause with zero values",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM table_name").Where().IN("name").Query()
+			return query.String()
+		},
+		expected: "SELECT * FROM table_name",
+	},
+	{
+		name: "IN combined with other conditions",
+		callback: func(t *testing.T) string {
+			query := New("SELECT * FROM users").Where().EQ("active", true).IN("role", "admin", "moderator").Query()
+			return query.String()
+		},
+		expected: "SELECT * FROM users WHERE active = true AND role IN ('admin','moderator')",
+	},
 }
 
 func TestQuery(t *testing.T) {
@@ -538,9 +570,10 @@ func ExampleQuery_String() {
 	query := New("SELECT * FROM test_table").LeftJoin("test_posts", "test_table.id=test_posts.user_id").Order("name", DESC).Limit("5").Offset("1").Where().
 		OR(EQ("name", "testname"), EQ("age", "12")).
 		AND(EQ("id", "123"), EQ("email", "test@mail.com")).
+		IN("name", "John", "Doe", "Jane").
 		LIKE("name", "%testname").Query()
 	fmt.Println(query.String())
-	// Output: SELECT * FROM test_table LEFT JOIN test_posts ON test_table.id=test_posts.user_id WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com') AND name LIKE '%testname' ORDER BY name DESC LIMIT 5 OFFSET 1
+	// Output: SELECT * FROM test_table LEFT JOIN test_posts ON test_table.id=test_posts.user_id WHERE (name = 'testname' OR age = '12') AND (id = '123' AND email = 'test@mail.com') AND name IN ('John','Doe','Jane') AND name LIKE '%testname' ORDER BY name DESC LIMIT 5 OFFSET 1
 }
 
 func ExampleQuery_InsertColumns() {

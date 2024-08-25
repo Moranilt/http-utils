@@ -32,6 +32,9 @@ type WhereClause interface {
 	// IS creates an IS condition for the specified field and value
 	IS(fieldName string, value any) WhereClause
 
+	// IN creates an IN condition for the specified field and values
+	IN(fieldName string, values ...any) WhereClause
+
 	// Query returns the Query object associated with this WhereClause
 	Query() *Query
 }
@@ -292,6 +295,48 @@ func (w *Query) IS(fieldName string, value any) WhereClause {
 	return w
 }
 
+func (w *Query) IN(fieldName string, values ...any) WhereClause {
+	if isEmpty(fieldName) || len(values) == 0 {
+		return w
+	}
+
+	w.where = append(w.where, IN(fieldName, values...))
+	return w
+}
+
+// GroupBy adds a GROUP BY clause to the query
+func (q *Query) GroupBy(columns ...string) *Query {
+	if len(columns) == 0 {
+		return q
+	}
+
+	q.groupBy = fmt.Sprintf("GROUP BY %s", strings.Join(columns, ", "))
+	return q
+}
+
+// Having adds a HAVING clause to the query
+func (q *Query) Having(condition string) *Query {
+	if condition == "" {
+		return q
+	}
+
+	q.having = fmt.Sprintf("HAVING %s", condition)
+	return q
+}
+
+// OR creates an OR condition string from the provided arguments.
+func OR(args ...string) string {
+	if len(args) < 2 {
+		return ""
+	}
+	return fmt.Sprintf("(%s)", strings.Join(args, " OR "))
+}
+
+// IS creates an IS condition string from the provided arguments.
+func IS(fieldName string, value any) string {
+	return buildComparison(fieldName, value, "IS")
+}
+
 // AND creates an AND condition string from the provided arguments.
 func AND(args ...string) string {
 	if len(args) < 2 {
@@ -308,6 +353,30 @@ func EQ(fieldName string, value any) string {
 // LIKE creates a LIKE condition string.
 func LIKE(fieldName string, value any) string {
 	return buildComparison(fieldName, value, "LIKE")
+}
+
+// IN creates an IN condition string from the provided field name and values.
+// If the values slice is empty, an empty string is returned.
+// The values are wrapped using the wrapValue function before being included in the IN clause.
+func IN(fieldName string, values ...any) string {
+	if len(values) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString(fieldName)
+	builder.WriteString(" IN (")
+	for i, v := range values {
+		if i > 0 {
+			builder.WriteByte(',')
+		}
+		builder.WriteString(wrapValue(v))
+	}
+	builder.WriteByte(')')
+	return builder.String()
+}
+
+func isEmpty(s string) bool {
+	return len(s) == 0
 }
 
 func buildComparison(fieldName string, value any, comparison string) string {
@@ -396,41 +465,4 @@ func buildValues(values [][]any) string {
 	}
 
 	return builder.String()
-}
-
-// OR creates an OR condition string from the provided arguments.
-func OR(args ...string) string {
-	if len(args) < 2 {
-		return ""
-	}
-	return fmt.Sprintf("(%s)", strings.Join(args, " OR "))
-}
-
-// IS creates an IS condition string from the provided arguments.
-func IS(fieldName string, value any) string {
-	return buildComparison(fieldName, value, "IS")
-}
-
-// GroupBy adds a GROUP BY clause to the query
-func (q *Query) GroupBy(columns ...string) *Query {
-	if len(columns) == 0 {
-		return q
-	}
-
-	q.groupBy = fmt.Sprintf("GROUP BY %s", strings.Join(columns, ", "))
-	return q
-}
-
-// Having adds a HAVING clause to the query
-func (q *Query) Having(condition string) *Query {
-	if condition == "" {
-		return q
-	}
-
-	q.having = fmt.Sprintf("HAVING %s", condition)
-	return q
-}
-
-func isEmpty(s string) bool {
-	return len(s) == 0
 }
