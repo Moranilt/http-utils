@@ -359,18 +359,30 @@ func LIKE(fieldName string, value any) string {
 // If the values slice is empty, an empty string is returned.
 // The values are wrapped using the wrapValue function before being included in the IN clause.
 func IN(fieldName string, values ...any) string {
-	if len(values) == 0 {
-		return ""
-	}
+
 	var builder strings.Builder
 	builder.WriteString(fieldName)
 	builder.WriteString(" IN (")
+
 	for i, v := range values {
 		if i > 0 {
 			builder.WriteByte(',')
 		}
-		builder.WriteString(wrapValue(v))
+
+		reflectValue := reflect.ValueOf(v)
+		if reflectValue.Kind() == reflect.Slice {
+			for j := 0; j < reflectValue.Len(); j++ {
+				if j > 0 {
+					builder.WriteByte(',')
+				}
+				builder.WriteString(wrapValue(reflectValue.Index(j).Interface()))
+			}
+		} else {
+			builder.WriteString(wrapValue(v))
+		}
+
 	}
+
 	builder.WriteByte(')')
 	return builder.String()
 }
