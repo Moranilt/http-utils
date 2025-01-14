@@ -50,11 +50,11 @@ const (
 
 const (
 	LevelTrace  = slog.Level(-8)
-	LevelNotice = slog.Level(2)
-	LevelFatal  = slog.Level(12)
-	LevelError  = slog.Level(4)
-	LevelDebug  = slog.Level(1)
+	LevelDebug  = slog.Level(-4)
 	LevelInfo   = slog.Level(0)
+	LevelNotice = slog.Level(2)
+	LevelError  = slog.Level(4)
+	LevelFatal  = slog.Level(12)
 )
 
 var LevelNames = map[slog.Leveler]string{
