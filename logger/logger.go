@@ -196,8 +196,14 @@ func (l *SLogger) WithRequestInfo(r *http.Request) Logger {
 	log := l.WithRequestId(r.Context())
 	var clientIP string
 
-	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		clientIP = ip
+	clientIP = r.Header.Get("X-Real-IP")
+
+	if clientIP == "" {
+		clientIP = r.Header.Get("X-Forwarded-For")
+	}
+
+	if clientIP == "" {
+		clientIP, _, _ = net.SplitHostPort(r.RemoteAddr)
 	}
 
 	return log.With(
